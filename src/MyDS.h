@@ -3,5 +3,8 @@
 
 #pragma once
 
-#include "Cpu.h"
 #include <iostream>
+#include "Cpu.h"
+#include "arm_mem.h"
+#include "arm7_mem.h"
+#include "arm9_mem.h"

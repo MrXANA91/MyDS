@@ -1,7 +1,7 @@
 #pragma once
 
 #include <cstdint>
-#include <queue>
+#include "arm_mem.h"
 
 constexpr auto REG_SP = 13;
 constexpr auto REG_LR = 14;
@@ -49,6 +49,8 @@ enum CpuMode {
 
 class Cpu {
 private:
+	ARM_mem* memory;
+
 	bool started{ false };
 
 	uint32_t bootAddress{ 0 };
@@ -80,6 +82,7 @@ private:
 public:
 	Cpu();
 	bool SetBootAddr(uint32_t bootAddr);
+	void SetMMU(ARM_mem* ptr);
 
 	CpuMode GetCurrentCpuMode() const;
 

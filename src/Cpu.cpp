@@ -13,6 +13,11 @@ bool Cpu::SetBootAddr(uint32_t bootAddr) {
 
 	if (started) return false;
 	reg[REG_PC] = bootAddr;
+	return true;
+}
+
+void Cpu::SetMMU(ARM_mem* ptr) {
+	memory = ptr;
 }
 
 CpuMode Cpu::GetCurrentCpuMode() const {
