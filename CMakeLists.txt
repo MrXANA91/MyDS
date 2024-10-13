@@ -12,7 +12,7 @@ endif()
 project ("MyDS")
 
 # Ajoutez une source à l'exécutable de ce projet.
-add_executable (MyDS "MyDS.cpp" "MyDS.h")
+add_executable (MyDS "src/MyDS.cpp" "src/MyDS.h" "src/Cpu.h" "src/Cpu.cpp")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MyDS PROPERTY CXX_STANDARD 20)

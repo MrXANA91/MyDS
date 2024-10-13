@@ -6,7 +6,10 @@
 using namespace std;
 
 int main()
-{
-	cout << "Hello CMake." << endl;
+{	
+	Cpu testCpu;
+
+	(void)testCpu.SetBootAddr(0xFFFF0000);
+
 	return 0;
 }
