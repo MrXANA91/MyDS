@@ -1,8 +1,12 @@
 #include "Cpu.h"
 
 void Cpu::PrintDebug() {
-	std::cout << "PC = " << std::hex << GetReg(REG_PC) << " ; ";
-	std::cout << "R0 = " << std::hex << GetReg(0) << "\n";
+	std::cout << "PC = 0x" << std::hex << GetReg(REG_PC) << " ; ";
+	std::cout << "Code = 0x" << std::hex << fetched_opcode << " ; ";
+	std::cout << "R0 = 0x" << std::hex << GetReg(0) << " ; ";
+	std::cout << "R1 = 0x" << std::hex << GetReg(1) << " ; ";
+	std::cout << "R2 = 0x" << std::hex << GetReg(2) << " ; ";
+	std::cout << "R3 = 0x" << std::hex << GetReg(3) << "\n";
 }
 
 Cpu::Cpu() {
@@ -174,11 +178,7 @@ void Cpu::Fetch() {
 	uint8_t* ptr = memory->GetPointerFromAddr(GetReg(REG_PC));
 	int opsize = (cpsr.bits.T == 0) ? 4 : 2;
 
-	fetched_opcode = 0;
-	for (int i = 0; i < opsize; i++) {
-		fetched_opcode |= ((uint32_t)*ptr) << (8 * i);
-		ptr++;
-	}
+	fetched_opcode = ARM_mem::GetBytesAtPointer(ptr, opsize);
 
 	SetReg(REG_PC, GetReg(REG_PC) + opsize);
 }
@@ -347,7 +347,7 @@ void Cpu::EXE_ALU(uint32_t opcode) {
 	if (immediate) {
 		int Is = (opcode & 0x00000F00) >> 8;
 		int nn = (opcode & 0x000000FF);
-		uint32_t op2 = AluBitShift(ROR, nn, Is*2, setConditionCodes);
+		uint32_t op2 = AluBitShift(ROR, nn, Is*2, setConditionCodes, true);
 		if (AluExecute(alu_opcode, Rd_value, Rn_value, op2, setConditionCodes)) {
 			if ((Rd == REG_PC) && (setConditionCodes)) {
 				RestoreCPSR();
@@ -457,7 +457,7 @@ bool Cpu::AluExecute(ALUOpCode opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, 
 	return updateRd;
 }
 
-uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool setFlags) {
+uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force) {
 	switch (type) {
 	default:
 		throw EXCEPTION_ALU_BITSHIFT_UNKNOWN_SHIFTTYPE;
@@ -467,20 +467,20 @@ uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool se
 		}
 		return base << shift;
 	case LSR:
-		if (shift == 0) shift = 32;
+		if ((shift == 0) && (!force)) shift = 32;
 		if (setFlags) {
 			cpsr.bits.C = ((base & (1 << (shift - 1))) != 0) ? 1 : 0;
 		}
 		return base >> shift;
 	case ASR:
-		if (shift == 0) shift = 32;
+		if ((shift == 0) && (!force)) shift = 32;
 		if (setFlags) {
 			cpsr.bits.C = ((base & (1 << (shift - 1))) != 0) ? 1 : 0;
 		}
 		return ((base >> shift) | (base & 0x80000000));
 	case ROR:
-		if (shift == 0) {
-			// interpreted as RRX#1 :
+		if ((shift == 0) && (!force)) {
+			// ROR#0 interpreted as RRX#1 : REALLY ??
 			// Rotates the number to the right by one place
 			// but the original bit 31 is filled by the value of the Carry flag
 			// and the original bit 0 is moved into the Carry flag
@@ -496,9 +496,79 @@ uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool se
 }
 
 bool Cpu::IsMemory(uint32_t opcode) {
-	return false;
+	return (opcode & 0x0C000000) == 0x04000000;
 }
 
 void Cpu::EXE_Memory(uint32_t opcode) {
+	bool immediate = (opcode & (1 << 25)) == 0;
+	bool addOffsetPreIndex = (opcode & (1 << 24)) != 0;
+	bool addToBase = (opcode & (1 << 23)) != 0;
+	bool byteTransfer = (opcode & (1 << 22)) != 0;
+	int size = byteTransfer ? 1 : 4;
 
+	bool memoryManagement = (opcode & (1 << 21)) != 0;
+	bool writeBack = memoryManagement;
+
+	bool load = (opcode & (1 << 20)) != 0;
+
+	int Rn = (opcode & (0xF << 16)) >> 16;
+	int Rd = (opcode & (0xF << 12)) >> 12;
+
+	int immediateOffset = (opcode & 0xFFF);
+
+	int shiftAmount = (opcode & (0x1F << 7)) >> 7;
+	ShiftType shiftType = (ShiftType)((opcode & (0x3 << 5)) >> 5);
+	bool isBit4Zero = (opcode & (1 << 4)) == 0;
+	int Rm = (opcode & 0xF);
+
+	// Offset calculation
+	uint32_t offset = 0;
+	if (immediate) {
+		offset = immediateOffset;
+	}
+	else {
+		if (Rm == REG_PC) throw EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE;
+		uint32_t Rm_value = GetReg(Rm);
+		offset = AluBitShift(shiftType, Rm_value, shiftAmount, false);
+	}
+
+	// If Pre index
+	uint32_t operandAddr = GetReg(Rn);
+	if (Rn == REG_PC) operandAddr += 4; // PC+8
+	if (addOffsetPreIndex) {
+		if (addToBase) {
+			operandAddr += offset;
+		}
+		else {
+			operandAddr -= offset;
+		}
+		if (writeBack) {
+			SetReg(Rn, operandAddr);
+		}
+	}
+	uint8_t *startPtr = memory->GetPointerFromAddr(operandAddr);
+	uint32_t operand = ARM_mem::GetWordAtPointer(startPtr);
+	// If Post index
+	if (!addOffsetPreIndex) {
+		if (addToBase) {
+			operand += offset;
+		}
+		else {
+			operand -= offset;
+		}
+		// WriteBack always enabled
+		ARM_mem::SetWordAtPointer(startPtr, operand);
+	}
+
+	// Execute...
+	if (load) { // ... load
+		// LDR PC, <op> sets CPSR.T bot <op> bit0 for ARMv5
+
+		uint32_t Rd_value = GetReg(Rd);
+		if (Rd == REG_PC) Rd_value += 8; // PC+12
+		ARM_mem::SetWordAtPointer(startPtr, Rd_value);
+	}
+	else { // ... store
+		SetReg(Rd, operand);
+	}
 }
