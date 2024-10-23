@@ -4,6 +4,7 @@
 #include <iostream>
 #include <iomanip>
 #include "arm_mem.h"
+#include "instructions.h"
 
 constexpr auto REG_SP = 13;
 constexpr auto REG_LR = 14;
@@ -17,6 +18,7 @@ constexpr auto EXCEPTION_CONDITION_UNKNOWN = 5;
 constexpr auto EXCEPTION_EXEC_BRANCH_DECODE_FAILURE = 6;
 constexpr auto EXCEPTION_ALU_BITSHIFT_UNKNOWN_SHIFTTYPE = 7;
 constexpr auto EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE = 8;
+constexpr auto EXCEPTION_EXEC_MEM_DECODE_FAILURE = 9;
 
 // https://problemkaputt.de/gbatek-arm-cpu-flags-condition-field-cond.htm
 union CPSR {
@@ -43,44 +45,6 @@ union CPSR {
 	uint32_t value;
 };
 
-enum Condition : uint8_t {
-	EQ = 0,	// Equal / zero
-	NE,		// Not equal
-	CS_HS,	// unsigned higher or same
-	CC_LO,	// unsigned lower
-	MI,		// signed negative
-	PL,		// signed positive or zero
-	VS,		// signed overflow
-	VC,		// signed no overflow
-	HI,		// unsigned higher
-	LS,		// unsigned lower or same
-	GE,		// signed greater or equal
-	LT,		// signed less than
-	GT,		// signed greater than
-	LE,		// signed less or equal
-	AL,		// always
-	rsv		// Reserved (previously never)
-};
-
-enum ALUOpCode : uint8_t {
-	AND = 0,	// Rd = Rn & Op2 (and)
-	EOR,		// Rd = Rn ^ Op2 (xor)
-	SUB,		// Rd = Rn - Op2 (substract)
-	RSB,		// Rd = Op2 - Rn (reversed sub)
-	ADD,		// Rd = Rn + Op2 (add)
-	ADC,		// Rd = Rn + Op2 + C (add with carry)
-	SBC,		// Rd = Rd - Op2 + C - 1 (sub with carry)
-	RSC,		// Rd = Op2 - Rn + C - 1 (reversed sub with carry)
-	TST,		// Rn & Op2 (test)
-	TEQ,		// Rn ^ Op2 (test exclusive)
-	CMP,		// Rn - Op2 (compare)
-	CMN,		// Rn + Op2 (compare negative)
-	ORR,		// Rd = Rn | Op2 (or)
-	MOV,		// Rd = Op2
-	BIC,		// Rd = Rn & ~Op2 (bit clear, Rn AND NOT Op2)
-	MVN			// Rd = ~Op2 (not)
-};
-
 enum CpuMode : uint16_t {
 	User = 0x10,			// (non privileged)
 	FIQ = 0x11,				// Fast Interrupt
@@ -89,13 +53,6 @@ enum CpuMode : uint16_t {
 	Abort = 0x17,			// Abort
 	Undefined = 0x1B,		// Undefined
 	System = 0x1F,			// (privileged 'User' mode)
-};
-
-enum ShiftType : uint8_t {
-	LSL = 0,	// Logical Shift Left
-	LSR,		// Logical Shift Right
-	ASR,		// Arithmetic Shift Right (sign bit is preserved)
-	ROR			// Rotate Right
 };
 
 class Cpu {
@@ -141,10 +98,12 @@ private:
 	bool IsBranch_BX_BLX(uint32_t opcode);
 	bool IsALU(uint32_t opcode);
 	bool IsMemory(uint32_t opcode);
+	//bool IsMemory_LDR_STR(uint32_t opcode);
+	//bool IsMemory_LDRHB_STRHB(uint32_t opcode);
 
 	void EXE_Branch(uint32_t opcode);
 	void EXE_ALU(uint32_t opcode);
-	bool AluExecute(ALUOpCode opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
+	bool AluExecute(ALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
 	uint32_t AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
 	void EXE_Memory(uint32_t opcode);
 	void EXE_Nop(uint32_t opcode) { }

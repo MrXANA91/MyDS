@@ -216,14 +216,15 @@ void Cpu::Execute() {
 }
 
 bool Cpu::IsConditionReserved(uint32_t opcode) const {
-	Condition condition = (Condition)((opcode & 0xF000000) >> 28);
+	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
+	Condition condition = (Condition)instruction->condition;
 
 	return (condition == rsv);
 }
 
 bool Cpu::IsConditionOK(uint32_t opcode) const {
-	uint32_t inter = ((opcode & 0xF0000000) >> 28);
-	Condition condition = (Condition)inter;
+	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
+	Condition condition = (Condition)instruction->condition;
 
 	switch (condition) {
 	case EQ:
@@ -268,22 +269,26 @@ bool Cpu::IsBranch(uint32_t opcode) {
 }
 
 bool Cpu::IsBranch_B_BL(uint32_t opcode) {
-	return (opcode & 0x0E000000) == 0x0A000000;
+	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
+	return instruction->mustbe5 == 5;
 }
 
 bool Cpu::IsBranch_BX_BLX(uint32_t opcode) {
-	return (opcode & 0x0FFFFF00) == 0x012FFF00;
+	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
+	return instruction->thumbSwitch.mustbe12FFF == 0x12FFF;
 }
 
 void Cpu::EXE_Branch(uint32_t opcode) {
+	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
+
 	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
-	if (IsBranch_B_BL(opcode)) {
-		int32_t offset = opcode & 0x00FFFFFF;
+	if (IsBranch_B_BL(instruction->opcode)) {
+		int32_t offset = static_cast<int32_t>(instruction->nn);
 		if ((offset & 0x00800000) != 0) offset += 0xFF000000;
 		uint32_t newPC = oldPC + 4 + offset * 4;
-		if (IsConditionReserved(opcode)) {
+		if (IsConditionReserved(instruction->opcode)) {
 			// ARM9 ONLY : BLX_imm, branch with link and thumb
-			bool halfword_offset = (opcode & 0x01000000) != 0;
+			bool halfword_offset = instruction->b_opcode;
 			newPC += (halfword_offset ? 2 : 0);
 			SetReg(REG_PC, newPC);
 			SetReg(REG_LR, oldPC);
@@ -291,27 +296,27 @@ void Cpu::EXE_Branch(uint32_t opcode) {
 			return;
 		}
 
-		if (!IsConditionOK(opcode)) return;
+		if (!IsConditionOK(instruction->opcode)) return;
 
-		if ((opcode & 0x01000000) != 0) {
+		if (instruction->b_opcode != 0) {
 			// branch with link
 			SetReg(REG_LR, oldPC);
 		}
 		SetReg(REG_PC, newPC);
 	}
-	else if (IsBranch_BX_BLX(opcode)) {
+	else if (IsBranch_BX_BLX(instruction->opcode)) {
 		
-		if (!IsConditionOK(opcode)) return;
+		if (!IsConditionOK(instruction->opcode)) return;
 
-		uint8_t sub_opcode = (opcode & 0x000000F0) >> 4;
-		int regID = (opcode & 0xF);
-		if ((sub_opcode == 0x1) || (sub_opcode == 0x2)) {
+		uint8_t bx_opcode = instruction->thumbSwitch.bx_opcode;
+		int regID = instruction->thumbSwitch.Rn;
+		if ((bx_opcode == 0x1) || (bx_opcode == 0x2)) {
 			// BX (or Jazelle, but Jazelle not supported so behaving like BX)
 			uint32_t Rn = GetReg(regID);
 			SetReg(REG_PC, Rn);
 			cpsr.bits.T = Rn & 0x1;
 		}
-		else if (sub_opcode == 0x3) {
+		else if (bx_opcode == 0x3) {
 			// BX with link
 			uint32_t Rn = GetReg(regID);
 			SetReg(REG_PC, Rn);
@@ -325,18 +330,23 @@ void Cpu::EXE_Branch(uint32_t opcode) {
 }
 
 bool Cpu::IsALU(uint32_t opcode) {
-	return ((opcode & 0x0C000000) == 0);
+	ALUInstruction* instruction = reinterpret_cast<ALUInstruction*>(&opcode);
+	return (instruction->secOpImm.mustbe0_2 == 0) || (instruction->secOpReg_shiftImm.mustbe0_2 == 0) ||
+		((instruction->secOpReg_shiftReg.mustbe0_1 == 0)
+			&& (instruction->secOpReg_shiftReg.mustbe0_2 == 0));
 }
 
 void Cpu::EXE_ALU(uint32_t opcode) {
-	if (!IsConditionOK(opcode)) return;
+	ALUInstruction* instruction = reinterpret_cast<ALUInstruction*>(&opcode);
 
-	bool immediate = (opcode & 0x02000000) != 0;
-	bool setConditionCodes = (opcode & 0x00100000) != 0;
-	ALUOpCode alu_opcode = (ALUOpCode)((opcode & 0x01E00000) >> 21);
+	if (!IsConditionOK(instruction->opcode)) return;
 
-	int Rn = (opcode & 0x000F0000) >> 16;
-	int Rd = (opcode & 0x0000F000) >> 12;
+	bool immediate = instruction->secOpImm.immediate;
+	bool setConditionCodes = instruction->secOpImm.setFlags;
+	ALUOpCode alu_opcode = (ALUOpCode)instruction->secOpImm.alu_opcode;
+
+	int Rn = instruction->secOpImm.Rn;
+	int Rd = instruction->secOpImm.Rd;
 	uint32_t Rn_value = GetReg(Rn);
 	uint32_t Rd_value = 0;
 
@@ -345,8 +355,8 @@ void Cpu::EXE_ALU(uint32_t opcode) {
 	}
 
 	if (immediate) {
-		int Is = (opcode & 0x00000F00) >> 8;
-		int nn = (opcode & 0x000000FF);
+		int Is = instruction->secOpImm.rorIs;
+		int nn = instruction->secOpImm.nn;
 		uint32_t op2 = AluBitShift(ROR, nn, Is*2, setConditionCodes, true);
 		if (AluExecute(alu_opcode, Rd_value, Rn_value, op2, setConditionCodes)) {
 			if ((Rd == REG_PC) && (setConditionCodes)) {
@@ -357,11 +367,11 @@ void Cpu::EXE_ALU(uint32_t opcode) {
 		return;
 	}
 
-	bool shiftByRegister = ((opcode & 0x10) != 0);
+	bool shiftByRegister = instruction->secOpReg_shiftImm.R;
 	if (shiftByRegister && (Rn == REG_PC)) Rn_value += 4;
-	ShiftType shiftType = (ShiftType)((opcode & 0x60) >> 5);
-	int Is = shiftByRegister ? (GetReg((opcode & 0x00000F00) >> 8) & 0xFF) : ((opcode & 0x00000F80) >> 7);
-	int Rm = (opcode & 0xF);
+	ShiftType shiftType = (ShiftType)instruction->secOpReg_shiftImm.shiftType;
+	int Is = shiftByRegister ? (GetReg(instruction->secOpReg_shiftReg.Rs) & 0xFF) : ((instruction->secOpReg_shiftImm.Is) >> 7);
+	int Rm = instruction->secOpReg_shiftImm.Rm;
 	uint32_t Rm_value = GetReg(Rm);
 	if (Rm == REG_PC) {
 		Rm_value += 4;
@@ -373,12 +383,12 @@ void Cpu::EXE_ALU(uint32_t opcode) {
 	}
 }
 
-bool Cpu::AluExecute(ALUOpCode opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, bool setFlags) {
+bool Cpu::AluExecute(ALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, bool setFlags) {
 	uint32_t result = 0;
 	bool updateRd = true;
 	int arithmetic = 0;
 
-	switch (opcode) {
+	switch (alu_opcode) {
 	case TST:
 		updateRd = false;
 		[[fallthrough]]; // fallthrough is explicit
@@ -496,30 +506,37 @@ uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool se
 }
 
 bool Cpu::IsMemory(uint32_t opcode) {
-	return (opcode & 0x0C000000) == 0x04000000;
+	SingleDataTransferInstruction* instr1 = reinterpret_cast<SingleDataTransferInstruction*>(&opcode);
+	//WordDataTransferInstruction* instr2 = reinterpret_cast<WordDataTransferInstruction*>(&opcode);
+
+	return (instr1->offsetImmediate.mustbe1 == 1);/* ||
+		((instr2->offsetRegister.mustbe0 == 0) && (instr2->offsetRegister.mustbe0_bis == 0) &&
+			(instr2->offsetRegister.mustbe1 == 1) && (instr2->offsetRegister.mustbe1_bis == 1));*/
 }
 
 void Cpu::EXE_Memory(uint32_t opcode) {
-	bool immediate = (opcode & (1 << 25)) == 0;
-	bool addOffsetPreIndex = (opcode & (1 << 24)) != 0;
-	bool addToBase = (opcode & (1 << 23)) != 0;
-	bool byteTransfer = (opcode & (1 << 22)) != 0;
+	SingleDataTransferInstruction* instruction = reinterpret_cast<SingleDataTransferInstruction*>(&opcode);
+
+	bool immediate = instruction->offsetImmediate.immediate == 0;
+	bool addOffsetPreIndex = instruction->offsetImmediate.preIndexed;
+	bool addToBase = instruction->offsetImmediate.up_down;
+	bool byteTransfer = instruction->offsetImmediate.byte_word;
 	int size = byteTransfer ? 1 : 4;
 
-	bool memoryManagement = (opcode & (1 << 21)) != 0;
-	bool writeBack = memoryManagement;
+	bool forceUserAccess = instruction->offsetImmediate.writeBack_forceUserAccess;
+	bool writeBack = forceUserAccess;
 
-	bool load = (opcode & (1 << 20)) != 0;
+	bool load = instruction->offsetImmediate.load_store;
 
-	int Rn = (opcode & (0xF << 16)) >> 16;
-	int Rd = (opcode & (0xF << 12)) >> 12;
+	int Rn = instruction->offsetImmediate.Rn;
+	int Rd = instruction->offsetImmediate.Rd;
 
-	int immediateOffset = (opcode & 0xFFF);
+	int immediateOffset = instruction->offsetImmediate.immediateOffset;
 
-	int shiftAmount = (opcode & (0x1F << 7)) >> 7;
-	ShiftType shiftType = (ShiftType)((opcode & (0x3 << 5)) >> 5);
-	bool isBit4Zero = (opcode & (1 << 4)) == 0;
-	int Rm = (opcode & 0xF);
+	int shiftAmount = instruction->offsetRegister.Is;
+	ShiftType shiftType = (ShiftType)instruction->offsetRegister.shiftType;
+	bool isBit4Zero = instruction->offsetRegister.mustbe0;
+	int Rm = instruction->offsetRegister.Rm;
 
 	// Offset calculation
 	uint32_t offset = 0;
@@ -562,7 +579,7 @@ void Cpu::EXE_Memory(uint32_t opcode) {
 
 	// Execute...
 	if (load) { // ... load
-		// LDR PC, <op> sets CPSR.T bot <op> bit0 for ARMv5
+		// TODO : LDR PC, <op> sets CPSR.T bot <op> bit0 for ARMv5
 
 		uint32_t Rd_value = GetReg(Rd);
 		if (Rd == REG_PC) Rd_value += 8; // PC+12

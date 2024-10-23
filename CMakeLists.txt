@@ -12,7 +12,7 @@ endif()
 project ("MyDS")
 
 # Ajoutez une source à l'exécutable de ce projet.
-add_executable (MyDS "src/MyDS.cpp" "src/MyDS.h" "src/Cpu.h" "src/Cpu.cpp"  "src/arm9_mem.h" "src/arm7_mem.h" "src/arm_mem.cpp" "src/arm_mem.h"   "src/ndsrom.h" "src/ndsrom.cpp")
+add_executable (MyDS "src/MyDS.cpp" "src/MyDS.h" "src/Cpu.h" "src/Cpu.cpp"  "src/arm9_mem.h" "src/arm7_mem.h" "src/arm_mem.cpp" "src/arm_mem.h"   "src/ndsrom.h" "src/ndsrom.cpp" "src/instructions.h" )
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET MyDS PROPERTY CXX_STANDARD 20)
