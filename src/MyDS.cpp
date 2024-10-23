@@ -8,37 +8,72 @@ using namespace std;
 static void InitArm9Memory(ARM9_mem &mem);
 static void ClearArm9MemReg(ARM9_mem mem, uint32_t startAddr, size_t size, int value = 0);
 
+static void LoadCustomTestProg(ARM9_mem &mem) {
+	uint8_t* ptr;
+
+	// Infinite loop at address 0x02000000
+	ptr = mem.GetPointerFromAddr(mem.MAINMEMORY_ADDR);
+	ARM_mem::SetWordAtPointer(ptr, 0xEAFFFFFE);
+
+	// Bios is 'Load R0 with 0x02000000 & go to addr located at R0'
+	ptr = mem.GetPointerFromAddr(mem.BIOS_ADDR);
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A00402);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE12FFF10);
+}
+
+static void LoadTinyNDSProg(ARM9_mem& mem) {
+	uint8_t* ptr;
+
+	ptr = mem.GetPointerFromAddr(mem.BIOS_ADDR);
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A00301);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A01003);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A02802);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0x00000000);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0x000001A0);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE5801304);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE5802000);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE5803240);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A0051A);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A0101F);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE3A02903);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE0C010B2);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xE2522001);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0x1AFFFFFC);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0x53534150);
+	ptr += 4;
+	ARM_mem::SetWordAtPointer(ptr, 0xEAFFFFFE);
+	ptr += 4;
+}
+
 int main()
 {	
 	Cpu arm9;
 	ARM9_mem mem;
-	uint8_t* ptr;
 
 	(void)arm9.SetBootAddr(mem.BIOS_ADDR);
 	arm9.SetMMU(&mem);
 
 	InitArm9Memory(mem);
 
-	// Infinite loop at address 0x02000000
-	ptr = mem.GetPointerFromAddr(mem.MAINMEMORY_ADDR);
-	*ptr = 0xFE;
-	*(ptr + 1) = 0xFF;
-	*(ptr + 2) = 0xFF;
-	*(ptr + 3) = 0xEA;
-
-	// Bios is 'Load R0 with 0x02000000 & go to addr located at R0'
-	ptr = mem.GetPointerFromAddr(mem.BIOS_ADDR);
-	*ptr = 0x02;
-	*(ptr + 1) = 0x04;
-	*(ptr + 2) = 0xA0;
-	*(ptr + 3) = 0xE3;
-	*(ptr + 4) = 0x10;
-	*(ptr + 5) = 0xFF;
-	*(ptr + 6) = 0x2F;
-	*(ptr + 7) = 0xE1;
+	LoadTinyNDSProg(mem);
 
 	arm9.PrintDebug();
-	for (int i = 0; i < 5; i++) {
+	for (int i = 0; i < 20; i++) {
 		arm9.DebugStep();
 		arm9.PrintDebug();
 	}
