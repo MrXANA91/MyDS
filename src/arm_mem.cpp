@@ -73,3 +73,14 @@ uint8_t* ARM7_mem::GetPointerFromAddr(uint32_t address) {
 	// TODO : what if address invalid ?
 	return nullptr;
 }
+
+uint32_t ARM_mem::GetBytesAtPointer(uint8_t* startPtr, int size) {
+	uint8_t* ptr = startPtr;
+	uint32_t value = 0;
+	for (int i = 0; i < size; i++) {
+		value |= ((uint32_t)*ptr) << (8 * i);
+		ptr++;
+	}
+	return value;
+}
+
