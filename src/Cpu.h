@@ -151,13 +151,38 @@ private:
 
 public:
 	Cpu();
+
+	/// <summary>
+	/// Set starting CPU (or boot) address. PC will not be changed if CPU already running.
+	/// </summary>
+	/// <param name="bootAddr">Address in virtual ARM memory</param>
+	/// <returns>false if CPU has already started, true otherwise</returns>
 	bool SetBootAddr(uint32_t bootAddr);
+
+	/// <summary>
+	/// Set virtual ARM memory object pointer
+	/// </summary>
+	/// <param name="ptr">Pointer to virtual memory object</param>
 	void SetMMU(ARM_mem* ptr);
 
+	/// <summary>
+	/// Returns the current CPU profile mode (User, FIQ, IRQ, Supervisor, Abort, Undefined, System)
+	/// </summary>
+	/// <returns></returns>
 	CpuMode GetCurrentCpuMode() const;
 
-	void DebugStep();
+	/// <summary>
+	/// Reset the CPU and the PC to boot address
+	/// </summary>
 	void Reset();
 
+	/// <summary>
+	/// Execute Fetch/Decode/Execute all at ones, one time
+	/// </summary>
+	void DebugStep();
+
+	/// <summary>
+	/// (DEBUG) Print to console some useful information
+	/// </summary>
 	void PrintDebug();
 };

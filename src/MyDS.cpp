@@ -22,55 +22,18 @@ static void LoadCustomTestProg(ARM9_mem &mem) {
 	ARM_mem::SetWordAtPointer(ptr, 0xE12FFF10);
 }
 
-static void LoadTinyNDSProg(ARM9_mem& mem) {
-	uint8_t* ptr;
-
-	ptr = mem.GetPointerFromAddr(mem.BIOS_ADDR);
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A00301);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A01003);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A02802);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0x00000000);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0x000001A0);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE5801304);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE5802000);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE5803240);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A0051A);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A0101F);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE3A02903);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE0C010B2);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xE2522001);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0x1AFFFFFC);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0x53534150);
-	ptr += 4;
-	ARM_mem::SetWordAtPointer(ptr, 0xEAFFFFFE);
-	ptr += 4;
-}
-
 int main()
-{	
+{
 	Cpu arm9;
 	ARM9_mem mem;
+	NDSRom nds("NDS-Files\\TinyFB.nds");
 
-	(void)arm9.SetBootAddr(mem.BIOS_ADDR);
+	(void)arm9.SetBootAddr(nds.GetARM9StartAddress());
 	arm9.SetMMU(&mem);
 
 	InitArm9Memory(mem);
 
-	LoadTinyNDSProg(mem);
+	nds.SetARM9ProgramMemory(mem);
 
 	arm9.PrintDebug();
 	for (int i = 0; i < 20; i++) {
