@@ -25,7 +25,7 @@ public:
 	/// <param name="startPtr">Pointer to first byte</param>
 	/// <returns>32bit Word</returns>
 	static uint32_t GetWordAtPointer(uint8_t* startPtr) {
-		return GetBytesAtPointer(startPtr, 4);
+		return static_cast<uint32_t>(GetBytesAtPointer(startPtr, 4));
 	}
 
 	/// <summary>
@@ -34,7 +34,7 @@ public:
 	/// <param name="startPtr">Pointer to first byte</param>
 	/// <returns>16bit Half-Word</returns>
 	static uint16_t GetHalfWordAtPointer(uint8_t* startPtr) {
-		return GetBytesAtPointer(startPtr, 2);
+		return static_cast<uint16_t>(GetBytesAtPointer(startPtr, 2));
 	}
 
 	/// <summary>

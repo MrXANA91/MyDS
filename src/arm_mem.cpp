@@ -79,7 +79,7 @@ uint64_t ARM_mem::GetBytesAtPointer(uint8_t* startPtr, int size) {
 	uint64_t value = 0;
 	if (size > 8) size = 8;
 	for (int i = 0; i < size; i++) {
-		value |= ((uint64_t)*ptr) << (8 * i);
+		value |= (static_cast<uint64_t>(*ptr)) << (8 * i);
 		ptr++;
 	}
 	return value;

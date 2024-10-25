@@ -178,7 +178,7 @@ void Cpu::Fetch() {
 	uint8_t* ptr = memory->GetPointerFromAddr(GetReg(REG_PC));
 	int opsize = (cpsr.bits.T == 0) ? 4 : 2;
 
-	fetched_opcode = ARM_mem::GetBytesAtPointer(ptr, opsize);
+	fetched_opcode = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
 
 	SetReg(REG_PC, GetReg(REG_PC) + opsize);
 }
@@ -217,14 +217,14 @@ void Cpu::Execute() {
 
 bool Cpu::IsConditionReserved(uint32_t opcode) const {
 	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
-	Condition condition = (Condition)instruction->condition;
+	Condition condition = static_cast<Condition>(instruction->condition);
 
 	return (condition == rsv);
 }
 
 bool Cpu::IsConditionOK(uint32_t opcode) const {
 	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
-	Condition condition = (Condition)instruction->condition;
+	Condition condition = static_cast<Condition>(instruction->condition);
 
 	switch (condition) {
 	case EQ:
@@ -534,7 +534,7 @@ void Cpu::EXE_Memory(uint32_t opcode) {
 	int immediateOffset = instruction->offsetImmediate.immediateOffset;
 
 	int shiftAmount = instruction->offsetRegister.Is;
-	ShiftType shiftType = (ShiftType)instruction->offsetRegister.shiftType;
+	ShiftType shiftType = static_cast<ShiftType>(instruction->offsetRegister.shiftType);
 	bool isBit4Zero = instruction->offsetRegister.mustbe0;
 	int Rm = instruction->offsetRegister.Rm;
 

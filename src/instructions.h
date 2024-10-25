@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#pragma pack(push)
 #pragma pack(1)
 
 union Instruction {
@@ -192,3 +193,5 @@ enum ShiftType : uint8_t {
 	ASR,		// Arithmetic Shift Right (sign bit is preserved)
 	ROR			// Rotate Right
 };
+
+#pragma pack(pop)

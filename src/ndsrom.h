@@ -5,8 +5,7 @@
 #include <fstream>
 #include "arm_mem.h"
 
-using namespace std;
-
+#pragma pack(push)
 #pragma pack(1)	// https://github.com/devkitPro/ndstool/blob/master/source/header.h
 struct NDSHeader {
 	char GameTitle[12];
@@ -64,20 +63,21 @@ struct NDSHeader {
 	uint32_t Debug_RAMAddress;
 	uint32_t Reserved_4;
 };
+#pragma pack(pop)
 
 class NDSRom {
 private:
 	NDSHeader header;
-	ifstream file;
+	std::ifstream file;
 
-	ifstream OpenFile(string, NDSHeader *);
+	std::ifstream OpenFile(std::string, NDSHeader *);
 
 public:
 	/// <summary>
 	/// Initialise a NDS ROM from a .NDS file
 	/// </summary>
 	/// <param name="filepath">Path to .NDS file</param>
-	NDSRom (string filepath);
+	NDSRom (std::string filepath);
 
 	~NDSRom();
 
