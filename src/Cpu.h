@@ -20,7 +20,6 @@ constexpr auto EXCEPTION_ALU_BITSHIFT_UNKNOWN_SHIFTTYPE = 7;
 constexpr auto EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE = 8;
 constexpr auto EXCEPTION_EXEC_MEM_DECODE_FAILURE = 9;
 
-// https://problemkaputt.de/gbatek-arm-cpu-flags-condition-field-cond.htm
 union CPSR {
 	struct {
 		uint32_t Mode : 5;	// Current operating mode
@@ -78,10 +77,32 @@ private:
 	CPSR spsr_irq{ 0 };
 	CPSR spsr_und{ 0 };
 
-	uint32_t fetched_opcode{ 0 };
-	int decoded_func{ 0 };
+	// Private members for instructions
+	uint32_t fetchedInstruction{ 0 };
+	eInstructCode decodedInstructCode{ INSTRUCT_NULL };
 
-	uint32_t GetReg(int regID);
+	eALUOpCode aluOpcode{ 0 };
+	bool SetFlags{ false };
+	uint32_t Rn{ 0 };
+	uint32_t Rn_value{ 0 };
+	uint32_t Rd{ 0 };
+	uint32_t Rd_value{ 0 };
+	uint32_t Rm{ 0 };
+	uint32_t Rm_value{ 0 };
+	uint32_t Rs{ 0 };
+	uint32_t Rs_value{ 0 };
+	uint32_t ShiftAmount{ 0 };
+	eShiftType Shift{ 0 };
+	uint32_t Rotate{ 0 };
+	uint32_t Mask{ 0 };
+	uint32_t Immediate{ 0 };
+	uint32_t Offset{ 0 };
+	uint32_t Operand{ 0 };
+
+	bool IsThumbMode() {
+		return cpsr.bits.T == 1;
+	}
+
 	void SetReg(int regID, uint32_t value);
 
 	void SaveCPSR();
@@ -91,24 +112,43 @@ private:
 	void Decode();
 	void Execute();
 
-	bool IsConditionReserved(uint32_t opcode) const;
 	bool IsConditionOK(uint32_t opcode) const;
-	bool IsBranch(uint32_t opcode);
-	bool IsBranch_B_BL(uint32_t opcode);
-	bool IsBranch_BX_BLX(uint32_t opcode);
-	bool IsALU(uint32_t opcode);
-	bool IsMemory(uint32_t opcode);
-	//bool IsMemory_LDR_STR(uint32_t opcode);
-	//bool IsMemory_LDRHB_STRHB(uint32_t opcode);
 
-	void EXE_Branch(uint32_t opcode);
-	void EXE_ALU(uint32_t opcode);
-	bool AluExecute(ALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
-	uint32_t AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
-	void EXE_Memory(uint32_t opcode);
-	void EXE_Nop(uint32_t opcode) { }
+	// Branch
+	void Branch(uint32_t opcode);
+
+	// Data processing
+	void DataProcImmShift(uint32_t opcode);
+	void DataProcRegShift(uint32_t opcode);
+	void DataProcImm(uint32_t opcode);
+	bool AluExecute(eALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
+	uint32_t AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
+
+	// Multiply
+
+	// Misc arithmetic (CLZ)
+
+	// Status register access
+	void MoveImmToStatusReg(uint32_t opcode);
+
+	// Load and store
+	void LoadStoreImmOffset(uint32_t opcode);
+	void LoadStoreRegOffset(uint32_t opcode);
+	void LoadStoreMultiple(uint32_t opcode);
+
+	// Semaphore
+
+	// Exeption-generating
+	void SoftwareInterrupt(uint32_t opcode);
+
+	// Coprocessor
+	void CoprocLoadStore_DoubleRegTransf(uint32_t opcode);
+	void CoprocDataProc(uint32_t opcode);
+	void CoprocRegTransf(uint32_t opcode);
 
 public:
+	bool Debug{ false };
+
 	Cpu();
 
 	/// <summary>
@@ -140,8 +180,12 @@ public:
 	/// </summary>
 	void DebugStep();
 
-	/// <summary>
-	/// (DEBUG) Print to console some useful information
-	/// </summary>
-	void PrintDebug();
+	uint32_t GetReg(int regID);
+
+	static std::string eConditionToString(eCondition cond);
+	static std::string eALUOpCodeToString(eALUOpCode aluOpcode);
+	static std::string eShiftTypeToString(eShiftType shift);
+	static std::string eInstructCodeToString(eInstructCode instruct);
+
+	void DisplayRegisters();
 };

@@ -1,13 +1,93 @@
 #include "Cpu.h"
 
-void Cpu::PrintDebug() {
-	std::cout << "PC = 0x" << std::hex << GetReg(REG_PC) << " ; ";
-	std::cout << "Code = 0x" << std::hex << fetched_opcode << " ; ";
-	std::cout << "R0 = 0x" << std::hex << GetReg(0) << " ; ";
-	std::cout << "R1 = 0x" << std::hex << GetReg(1) << " ; ";
-	std::cout << "R2 = 0x" << std::hex << GetReg(2) << " ; ";
-	std::cout << "R3 = 0x" << std::hex << GetReg(3) << "\n";
+#pragma region Debug
+
+void Cpu::DisplayRegisters() {
+	for (int i = 0; i < 16; i++) {
+		uint32_t reg = GetReg(i);
+		std::cout << "R" << i << " = 0x" << std::hex << reg << std::dec << " (" << reg << ")\n";
+	}
 }
+
+std::string Cpu::eConditionToString(eCondition cond)
+{
+	switch (cond) {
+	case EQ: return "Equal / zero";
+	case NE: return "Not equal";
+	case CS_HS: return "unsigned higher or same";
+	case CC_LO: return "unsigned lower";
+	case MI:	return "signed negative";
+	case PL:	return "signed positive or zero";
+	case VS:	return "signed overflow";
+	case VC:	return "signed no overflow";
+	case HI:	return "unsigned higher";
+	case LS:	return "unsigned lower or same";
+	case GE:	return "signed greater or equal";
+	case LT:	return "signed less than";
+	case GT:	return "signed greater than";
+	case LE:	return "signed less or equal";
+	case AL:	return "always";
+	case rsv:	return "Reserved";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+std::string Cpu::eALUOpCodeToString(eALUOpCode aluOpcode) {
+	switch (aluOpcode) {
+	case AND:	return "AND";
+	case EOR:	return "EOR";
+	case SUB:	return "SUB";
+	case RSB:	return "RSB";
+	case ADD:	return "ADD";
+	case ADC:	return "ADC";
+	case SBC:	return "SBC";
+	case RSC:	return "RSC";
+	case TST:	return "TST";
+	case TEQ:	return "TEQ";
+	case CMP:	return "CMP";
+	case CMN:	return "CMN";
+	case ORR:	return "ORR";
+	case MOV:	return "MOV";
+	case BIC:	return "BIC";
+	case MVN:	return "MVN";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+std::string Cpu::eShiftTypeToString(eShiftType shift) {
+	switch (shift) {
+	case LSL:	return "Logical Shift Left";
+	case LSR:	return "Logical Shift Right";
+	case ASR:	return "Arithmetic Shift Right";
+	case ROR:	return "Rotate Right";
+	default:
+		return "UNKNOWN";
+	}
+}
+
+std::string Cpu::eInstructCodeToString(eInstructCode instruct) {
+	switch (instruct) {
+	default:
+	case INSTRUCT_NULL:
+		return "INSTRUCT_NULL";
+	case INSTRUCT_DATA_PROC_IMM_SHIFT:return "INSTRUCT_DATA_PROC_IMM_SHIFT";
+	case INSTRUCT_DATA_PROC_REG_SHIFT:return "INSTRUCT_DATA_PROC_REG_SHIFT";
+	case INSTRUCT_DATA_PROC_IMM:return "INSTRUCT_DATA_PROC_IMM";
+	case INSTRUCT_MOVE_IMM_STATUS_REG:return "INSTRUCT_MOVE_IMM_STATUS_REG";
+	case INSTRUCT_LOAD_STORE_IMM_OFFSET:return "INSTRUCT_LOAD_STORE_IMM_OFFSET";
+	case INSTRUCT_LOAD_STORE_REG_OFFSET:return "INSTRUCT_LOAD_STORE_REG_OFFSET";
+	case INSTRUCT_LOAD_STORE_MULTIPLE:return "INSTRUCT_LOAD_STORE_MULTIPLE";
+	case INSTRUCT_BRANCH_BRANCHLINK:return "INSTRUCT_BRANCH_BRANCHLINK";
+	case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:return "INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF";
+	case INSTRUCT_COPROC_DATA_PROC:return "INSTRUCT_COPROC_DATA_PROC";
+	case INSTRUCT_COPROC_REG_TRANSF:return "INSTRUCT_COPROC_REG_TRANSF";
+	case INSTRUCT_SOFTWARE_INTERRUPT:return "INSTRUCT_SOFTWARE_INTERRUPT";
+	}
+}
+
+#pragma endregion
 
 Cpu::Cpu() {
 	cpsr.value = 0;
@@ -68,18 +148,21 @@ void Cpu::SetReg(int regID, uint32_t value) {
 
 	if ((regID < 8 || regID == 15)) {
 		reg[regID] = value;
+		if (Debug) std::cout << "R" << regID << " := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		return;
 	}
 	// Here, regID is from 8 to 14
 
 	if (GetCurrentCpuMode() == FIQ) {
 		reg_fiq[regID - 8] = value;
+		if (Debug) std::cout << "R" << regID-8 << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		return;
 	}
 	// Here, we are not in FIQ mode
 
 	if ((regID != 13) && (regID != 14)) {
 		reg[regID] = value;
+		if (Debug) std::cout << "R" << regID << " := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		return;
 	}
 	// Here, we want to access either SP or LR
@@ -88,21 +171,27 @@ void Cpu::SetReg(int regID, uint32_t value) {
 	case System:
 	case User:
 		reg[regID] = value;
+		if (Debug) std::cout << "R" << regID << " := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case Supervisor:
 		reg_svc[regID - 13] = value;
+		if (Debug) std::cout << "R" << regID - 13 << "(SVC) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case Abort:
 		reg_abt[regID - 13] = value;
+		if (Debug) std::cout << "R" << regID - 13 << "(ABT) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case IRQ:
 		reg_irq[regID - 13] = value;
+		if (Debug) std::cout << "R" << regID - 13 << "(IRQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case Undefined:
 		reg_und[regID - 13] = value;
+		if (Debug) std::cout << "R" << regID - 13 << "(UND) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case FIQ:
 		reg_fiq[regID - 8] = value;
+		if (Debug) std::cout << "R" << regID - 8 << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	default:
 		throw EXCEPTION_REG_ACCESS_IN_UNKNWOWN_MODE;
@@ -170,61 +259,192 @@ void Cpu::Reset() {
 
 void Cpu::DebugStep() {
 	Fetch();
-	Decode();
-	Execute();
+	if (IsThumbMode()) {
+		throw "NO THUMB YET";
+	}
+	else {
+		Decode();
+		Execute();
+	}
 }
 
 void Cpu::Fetch() {
 	uint8_t* ptr = memory->GetPointerFromAddr(GetReg(REG_PC));
-	int opsize = (cpsr.bits.T == 0) ? 4 : 2;
+	int opsize = (IsThumbMode()) ? 2 : 4;
 
-	fetched_opcode = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
+	fetchedInstruction = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
+	if (Debug) std::cout << "Instruction = 0x" << std::hex << fetchedInstruction << std::dec;
+	if (Debug) std::cout << " - Condition : " << eConditionToString(static_cast<eCondition>(reinterpret_cast<sInstruction*>(&fetchedInstruction)->condition));
+	if (Debug) std::cout << "\n";
 
 	SetReg(REG_PC, GetReg(REG_PC) + opsize);
 }
 
 void Cpu::Decode() {
-	if (IsBranch(fetched_opcode)) {
-		decoded_func = 1;
+	decodedInstructCode = INSTRUCT_NULL;
+
+	if (IsDataProcImmShift(fetchedInstruction)) {
+		// Misc if opcode = 0b10XX
+
+		const sDataProcImmShift* instruction = reinterpret_cast<sDataProcImmShift*>(&fetchedInstruction);
+		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+		SetFlags = instruction->S != 0;
+		Rn = instruction->Rn;
+		Rd = instruction->Rd;
+		ShiftAmount = instruction->shiftAmount;
+		Shift = static_cast<eShiftType>(instruction->shift);
+		Rm = instruction->Rm;
+
+		decodedInstructCode = INSTRUCT_DATA_PROC_IMM_SHIFT;
 	}
-	else if (IsALU(fetched_opcode)) {
-		decoded_func = 2;
+	else if (IsDataProcRegShift(fetchedInstruction)) {
+		// Misc if opcode = 0b10XX
+
+		const sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&fetchedInstruction);
+		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+		SetFlags = instruction->S != 0;
+		Rn = instruction->Rn;
+		Rd = instruction->Rd;
+		Rs = instruction->Rs;
+		Shift = static_cast<eShiftType>(instruction->shift);
+		Rm = instruction->Rm;
+
+		decodedInstructCode = INSTRUCT_DATA_PROC_REG_SHIFT;
 	}
-	else if (IsMemory(fetched_opcode)) {
-		decoded_func = 3;
+	// Multiplies/Extra LoadStore if bit7 = 1
+	else if (IsDataProcImm(fetchedInstruction)) {
+		// Undefined instruction if opcode = 0b10X0 & S = 0
+		// MoveImmToStatusReg if opcode = 0b10X1 & S = 0
+
+		const sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&fetchedInstruction);
+		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+		SetFlags = instruction->S != 0;
+		Rn = instruction->Rn;
+		Rd = instruction->Rd;
+		Rotate = instruction->rotate;
+		Immediate = instruction->immediate;
+
+		decodedInstructCode = INSTRUCT_DATA_PROC_IMM;
 	}
-	else {
-		decoded_func = 0;
+	else if (IsMoveImmToStatusReg(fetchedInstruction)) {
+		const sMoveImmToStatusReg* instruction = reinterpret_cast<sMoveImmToStatusReg*>(&fetchedInstruction);
+		Mask = instruction->Mask;
+		Rotate = instruction->rotate;
+		Immediate = instruction->immediate;
+
+		decodedInstructCode = INSTRUCT_MOVE_IMM_STATUS_REG;
 	}
+	else if (IsLoadStoreImmOffset(fetchedInstruction)) {
+		const sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&fetchedInstruction);
+		Rn = instruction->Rn;
+		Rd = instruction->Rd;
+		Immediate = instruction->immediate;
+
+		decodedInstructCode = INSTRUCT_LOAD_STORE_IMM_OFFSET;
+	}
+	else if (IsLoadStoreRegOffset(fetchedInstruction)) {
+		const sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&fetchedInstruction);
+		Rn = instruction->Rn;
+		Rd = instruction->Rd;
+		ShiftAmount = instruction->shiftAmount;
+		Shift = static_cast<eShiftType>(instruction->shift);
+		Rm = instruction->Rm;
+
+		decodedInstructCode = INSTRUCT_LOAD_STORE_REG_OFFSET;
+	}
+	// Media instruction if bit4 = 1
+	// ArchUndefined if .... ?
+	else if (IsLoadStoreMultiple(fetchedInstruction)) {
+		const sLoadStoreMultiple* instruction = reinterpret_cast<sLoadStoreMultiple*>(&fetchedInstruction);
+		Rn = instruction->Rn;
+
+		decodedInstructCode = INSTRUCT_LOAD_STORE_MULTIPLE;
+	}
+	else if (IsBranch(fetchedInstruction)) {
+		const sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&fetchedInstruction);
+		Offset = instruction->offset;
+
+		decodedInstructCode = INSTRUCT_BRANCH_BRANCHLINK;
+	}
+	else if (IsCoprocLoadStore_DoubleRegTransf(fetchedInstruction)) {
+		const sCoprocLoadStore_DoubleRegTransf* instruction = reinterpret_cast<sCoprocLoadStore_DoubleRegTransf*>(&fetchedInstruction);
+		Rn = instruction->Rn;
+		Offset = instruction->offset;
+
+		decodedInstructCode = INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF;
+	}
+	else if (IsCoprocRegTransf(fetchedInstruction)) {
+		decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+	}
+	else if (IsCoprocRegTransf(fetchedInstruction)) {
+		decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+	}
+	else if (IsSoftwareInterrupt(fetchedInstruction)) {
+		decodedInstructCode = INSTRUCT_SOFTWARE_INTERRUPT;
+	}
+	else if (IsConditionReserved(fetchedInstruction)) {
+
+	}
+
+	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(decodedInstructCode) << "\n";
 }
 
 void Cpu::Execute() {
-	switch (decoded_func) {
-	case 0:
-		EXE_Nop(fetched_opcode);
+	try {
+		Rd_value = GetReg(Rd);
+		Rn_value = GetReg(Rn);
+		Rm_value = GetReg(Rm);
+		Rs_value = GetReg(Rs);
+	}
+	catch (int) {}
+
+	switch (decodedInstructCode) {
+	default:
+	case INSTRUCT_NULL:
+
 		break;
-	case 1:
-		EXE_Branch(fetched_opcode);
+	case INSTRUCT_DATA_PROC_IMM_SHIFT:
+		DataProcImmShift(fetchedInstruction);
 		break;
-	case 2:
-		EXE_ALU(fetched_opcode);
+	case INSTRUCT_DATA_PROC_REG_SHIFT:
+		DataProcRegShift(fetchedInstruction);
 		break;
-	case 3:
-		EXE_Memory(fetched_opcode);
+	case INSTRUCT_DATA_PROC_IMM:
+		DataProcImm(fetchedInstruction);
 		break;
+	//case INSTRUCT_MOVE_IMM_STATUS_REG:
+
+		//break;
+	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
+		LoadStoreImmOffset(fetchedInstruction);
+		break;
+	case INSTRUCT_LOAD_STORE_REG_OFFSET:
+		LoadStoreRegOffset(fetchedInstruction);
+		break;
+	case INSTRUCT_LOAD_STORE_MULTIPLE:
+		//LoadStoreMultiple(fetchedInstruction);
+		break;
+	case INSTRUCT_BRANCH_BRANCHLINK:
+		Branch(fetchedInstruction);
+		break;
+	//case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:
+
+	//	break;
+	//case INSTRUCT_COPROC_DATA_PROC:
+
+	//	break;
+	//case INSTRUCT_COPROC_REG_TRANSF:
+
+	//	break;
+	//case INSTRUCT_SOFTWARE_INTERRUPT:
+
+	//	break;
 	}
 }
 
-bool Cpu::IsConditionReserved(uint32_t opcode) const {
-	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
-	Condition condition = static_cast<Condition>(instruction->condition);
-
-	return (condition == rsv);
-}
-
 bool Cpu::IsConditionOK(uint32_t opcode) const {
-	Instruction* instruction = reinterpret_cast<Instruction*>(&opcode);
-	Condition condition = static_cast<Condition>(instruction->condition);
+	sInstruction* instruction = reinterpret_cast<sInstruction*>(&opcode);
+	eCondition condition = static_cast<eCondition>(instruction->condition);
 
 	switch (condition) {
 	case EQ:
@@ -264,22 +484,8 @@ bool Cpu::IsConditionOK(uint32_t opcode) const {
 	}
 }
 
-bool Cpu::IsBranch(uint32_t opcode) {
-	return IsBranch_B_BL(opcode) || IsBranch_BX_BLX(opcode);
-}
-
-bool Cpu::IsBranch_B_BL(uint32_t opcode) {
-	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
-	return instruction->mustbe5 == 5;
-}
-
-bool Cpu::IsBranch_BX_BLX(uint32_t opcode) {
-	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
-	return instruction->thumbSwitch.mustbe12FFF == 0x12FFF;
-}
-
-void Cpu::EXE_Branch(uint32_t opcode) {
-	BranchInstruction* instruction = reinterpret_cast<BranchInstruction*>(&opcode);
+/*void Cpu::EXE_Branch(uint32_t opcode) {
+	sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&opcode);
 
 	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
 	if (IsBranch_B_BL(instruction->opcode)) {
@@ -327,63 +533,25 @@ void Cpu::EXE_Branch(uint32_t opcode) {
 	else {
 		throw EXCEPTION_EXEC_BRANCH_DECODE_FAILURE;
 	}
+}*/
+
+void Cpu::Branch(uint32_t opcode) {
+	if (!IsConditionOK(opcode)) return;
+
+	int32_t signedOffset = Offset;
+	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
+	if ((signedOffset & 0x00800000) != 0) signedOffset += 0xFF000000;
+	uint32_t newPC = oldPC + 4 + signedOffset * 4;
+
+	sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&opcode);
+	if (instruction->L != 0) {
+		// Branch with Link
+		SetReg(REG_LR, oldPC);
+	}
+	SetReg(REG_PC, newPC);
 }
 
-bool Cpu::IsALU(uint32_t opcode) {
-	ALUInstruction* instruction = reinterpret_cast<ALUInstruction*>(&opcode);
-	return (instruction->secOpImm.mustbe0_2 == 0) || (instruction->secOpReg_shiftImm.mustbe0_2 == 0) ||
-		((instruction->secOpReg_shiftReg.mustbe0_1 == 0)
-			&& (instruction->secOpReg_shiftReg.mustbe0_2 == 0));
-}
-
-void Cpu::EXE_ALU(uint32_t opcode) {
-	ALUInstruction* instruction = reinterpret_cast<ALUInstruction*>(&opcode);
-
-	if (!IsConditionOK(instruction->opcode)) return;
-
-	bool immediate = instruction->secOpImm.immediate;
-	bool setConditionCodes = instruction->secOpImm.setFlags;
-	ALUOpCode alu_opcode = (ALUOpCode)instruction->secOpImm.alu_opcode;
-
-	int Rn = instruction->secOpImm.Rn;
-	int Rd = instruction->secOpImm.Rd;
-	uint32_t Rn_value = GetReg(Rn);
-	uint32_t Rd_value = 0;
-
-	if (Rn == REG_PC) {
-		Rn_value += 4;
-	}
-
-	if (immediate) {
-		int Is = instruction->secOpImm.rorIs;
-		int nn = instruction->secOpImm.nn;
-		uint32_t op2 = AluBitShift(ROR, nn, Is*2, setConditionCodes, true);
-		if (AluExecute(alu_opcode, Rd_value, Rn_value, op2, setConditionCodes)) {
-			if ((Rd == REG_PC) && (setConditionCodes)) {
-				RestoreCPSR();
-			}
-			SetReg(Rd, Rd_value);
-		}
-		return;
-	}
-
-	bool shiftByRegister = instruction->secOpReg_shiftImm.R;
-	if (shiftByRegister && (Rn == REG_PC)) Rn_value += 4;
-	ShiftType shiftType = (ShiftType)instruction->secOpReg_shiftImm.shiftType;
-	int Is = shiftByRegister ? (GetReg(instruction->secOpReg_shiftReg.Rs) & 0xFF) : ((instruction->secOpReg_shiftImm.Is) >> 7);
-	int Rm = instruction->secOpReg_shiftImm.Rm;
-	uint32_t Rm_value = GetReg(Rm);
-	if (Rm == REG_PC) {
-		Rm_value += 4;
-		if (shiftByRegister) Rm_value += 4;
-	}
-	uint32_t op2 = AluBitShift(shiftType, Rm_value, Is, setConditionCodes);
-	if (AluExecute(alu_opcode, Rd_value, Rn_value, op2, setConditionCodes)) {
-		SetReg(Rd, Rd_value);
-	}
-}
-
-bool Cpu::AluExecute(ALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, bool setFlags) {
+bool Cpu::AluExecute(eALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, bool setFlags) {
 	uint32_t result = 0;
 	bool updateRd = true;
 	int arithmetic = 0;
@@ -467,7 +635,42 @@ bool Cpu::AluExecute(ALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t o
 	return updateRd;
 }
 
-uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force) {
+void Cpu::DataProcImmShift(uint32_t opcode) {
+	if (!IsConditionOK(fetchedInstruction)) return;
+
+	if (Rn == REG_PC) Rn_value += 4;
+	if (Rm == REG_PC) Rm_value += 4;
+
+	Operand = AluBitShift(Shift, Rm_value, ShiftAmount, SetFlags);
+
+	if (AluExecute(aluOpcode, Rd, Rn, Operand, SetFlags)) {
+		SetReg(Rd, Rd_value);
+	}
+}
+
+void Cpu::DataProcRegShift(uint32_t opcode) {
+	ShiftAmount = Rs_value & 0xFF;
+	if (Rm == REG_PC) Rm_value += 4;
+
+	DataProcImmShift(opcode);
+}
+
+void Cpu::DataProcImm(uint32_t opcode) {
+	if (!IsConditionOK(fetchedInstruction)) return;
+
+	if (Rn == REG_PC) Rn_value += 4;
+
+	Operand = AluBitShift(ROR, Immediate, Rotate * 2, SetFlags, true);
+
+	if (AluExecute(aluOpcode, Rd_value, Rn_value, Operand, SetFlags)) {
+		if ((Rd == REG_PC) && (SetFlags)) {
+			RestoreCPSR();
+		}
+		SetReg(Rd, Rd_value);
+	}
+}
+
+uint32_t Cpu::AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force) {
 	switch (type) {
 	default:
 		throw EXCEPTION_ALU_BITSHIFT_UNKNOWN_SHIFTTYPE;
@@ -505,87 +708,71 @@ uint32_t Cpu::AluBitShift(ShiftType type, uint32_t base, uint32_t shift, bool se
 	}
 }
 
-bool Cpu::IsMemory(uint32_t opcode) {
-	SingleDataTransferInstruction* instr1 = reinterpret_cast<SingleDataTransferInstruction*>(&opcode);
-	//WordDataTransferInstruction* instr2 = reinterpret_cast<WordDataTransferInstruction*>(&opcode);
+void Cpu::LoadStoreImmOffset(uint32_t opcode) {
+	sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&opcode);
+	bool P_preindexed = instruction->P;
+	bool U_add = instruction->U;
+	bool B_byte = instruction->B;
+	bool W_writeBack = instruction->W;		// if P = 1
+	bool W_userMemAccess = instruction->W;	// if P = 0
+	bool L_load = instruction->L;
 
-	return (instr1->offsetImmediate.mustbe1 == 1);/* ||
-		((instr2->offsetRegister.mustbe0 == 0) && (instr2->offsetRegister.mustbe0_bis == 0) &&
-			(instr2->offsetRegister.mustbe1 == 1) && (instr2->offsetRegister.mustbe1_bis == 1));*/
-}
-
-void Cpu::EXE_Memory(uint32_t opcode) {
-	SingleDataTransferInstruction* instruction = reinterpret_cast<SingleDataTransferInstruction*>(&opcode);
-
-	bool immediate = instruction->offsetImmediate.immediate == 0;
-	bool addOffsetPreIndex = instruction->offsetImmediate.preIndexed;
-	bool addToBase = instruction->offsetImmediate.up_down;
-	bool byteTransfer = instruction->offsetImmediate.byte_word;
-	int size = byteTransfer ? 1 : 4;
-
-	bool forceUserAccess = instruction->offsetImmediate.writeBack_forceUserAccess;
-	bool writeBack = forceUserAccess;
-
-	bool load = instruction->offsetImmediate.load_store;
-
-	int Rn = instruction->offsetImmediate.Rn;
-	int Rd = instruction->offsetImmediate.Rd;
-
-	int immediateOffset = instruction->offsetImmediate.immediateOffset;
-
-	int shiftAmount = instruction->offsetRegister.Is;
-	ShiftType shiftType = static_cast<ShiftType>(instruction->offsetRegister.shiftType);
-	bool isBit4Zero = instruction->offsetRegister.mustbe0;
-	int Rm = instruction->offsetRegister.Rm;
-
-	// Offset calculation
-	uint32_t offset = 0;
-	if (immediate) {
-		offset = immediateOffset;
-	}
-	else {
-		if (Rm == REG_PC) throw EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE;
-		uint32_t Rm_value = GetReg(Rm);
-		offset = AluBitShift(shiftType, Rm_value, shiftAmount, false);
-	}
+	int size = B_byte ? 1 : 4;
 
 	// If Pre index
-	uint32_t operandAddr = GetReg(Rn);
+	uint32_t operandAddr = Rn_value;
 	if (Rn == REG_PC) operandAddr += 4; // PC+8
-	if (addOffsetPreIndex) {
-		if (addToBase) {
-			operandAddr += offset;
+	if (P_preindexed) {
+		if (U_add) {
+			operandAddr += Immediate;
 		}
 		else {
-			operandAddr -= offset;
+			operandAddr -= Immediate;
 		}
-		if (writeBack) {
-			SetReg(Rn, operandAddr);
-		}
+		if (W_writeBack) SetReg(Rn, operandAddr);
 	}
-	uint8_t *startPtr = memory->GetPointerFromAddr(operandAddr);
-	uint32_t operand = ARM_mem::GetWordAtPointer(startPtr);
+
+	if (!P_preindexed && W_userMemAccess) {
+		// TODO : Check if memory is User accessible
+	}
+	uint8_t* startPtr = memory->GetPointerFromAddr(operandAddr);
+	Operand = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(startPtr, size));
+
 	// If Post index
-	if (!addOffsetPreIndex) {
-		if (addToBase) {
-			operand += offset;
+	if (!P_preindexed) {
+		if (U_add) {
+			Operand += Immediate;
 		}
 		else {
-			operand -= offset;
+			Operand -= Immediate;
 		}
 		// WriteBack always enabled
-		ARM_mem::SetWordAtPointer(startPtr, operand);
+		ARM_mem::SetWordAtPointer(startPtr, Operand);
 	}
 
 	// Execute...
-	if (load) { // ... load
-		// TODO : LDR PC, <op> sets CPSR.T bot <op> bit0 for ARMv5
+	if (L_load) {	// ... load
+		// TODO : LDR PC, <op> sets CPSR.T <op> bit0 (LSB) for ARMv5
 
-		uint32_t Rd_value = GetReg(Rd);
+		SetReg(Rd, B_byte ? static_cast<uint8_t>(Operand) : Operand);
+	}
+	else {			// ... store
 		if (Rd == REG_PC) Rd_value += 8; // PC+12
-		ARM_mem::SetWordAtPointer(startPtr, Rd_value);
+
+		if (B_byte) {
+			*startPtr = static_cast<uint8_t>(Rd_value);
+		}
+		else {
+			ARM_mem::SetWordAtPointer(startPtr, Rd_value);
+		}
 	}
-	else { // ... store
-		SetReg(Rd, operand);
-	}
+}
+
+void Cpu::LoadStoreRegOffset(uint32_t opcode) {
+	sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
+
+	if (Rm == REG_PC) throw EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE;
+	Immediate = AluBitShift(Shift, Rm_value, ShiftAmount, false);
+
+	LoadStoreImmOffset(opcode);
 }

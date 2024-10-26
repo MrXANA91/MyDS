@@ -22,21 +22,99 @@ static void LoadCustomTestProg(ARM9_mem &mem) {
 
 int main()
 {
+	using namespace std::chrono;
+
+	std::cout << "=============================" << "\n";
+	std::cout << "MyDS Emulator - Debug console" << "\n";
+	std::cout << "=============================" << "\n";
+	std::cout << "\n";
+
 	Cpu arm9;
 	ARM9_mem mem;
 	NDSRom nds("NDS-Files\\TinyFB.nds");
 
+	std::cout << "CPU : arm9\n";
+	if (nds.IsOpened()) {
+		std::cout << "TinyFB.nds successfully opened\n";
+	}
+	else {
+		std::cout << "Could not load TinyFB.nds file, exiting.\n";
+		return -1;
+	}
+
 	arm9.SetBootAddr(nds.GetARM9StartAddress());
 	arm9.SetMMU(&mem);
-
 	InitArm9Memory(mem);
-
 	nds.SetARM9ProgramMemory(mem);
 
-	arm9.PrintDebug();
-	for (int i = 0; i < 20; i++) {
-		arm9.DebugStep();
-		arm9.PrintDebug();
+	std::cout << "Emulator setup finished.\n> ";
+
+	char command[50];
+
+	uint32_t addr{ 0 };
+	uint32_t bpAddr{ 0xFFFFFFFF };
+	uint32_t pc = arm9.GetReg(REG_PC);
+	uint64_t execInstr{ 0 };
+	uint8_t reg{ 0 };
+	uint8_t reg_value{ 0 };
+	steady_clock::time_point start;
+	steady_clock::time_point end;
+
+	while (true) {
+		std::cin >> command;
+
+		switch (command[0]) {
+		case 's':
+			arm9.Debug = true;
+			arm9.DebugStep();
+			arm9.Debug = false;
+			break;
+		case 'm':
+			std::cout << "Enter mem address as hex address to read : 0x";
+			std::cin >> std::hex >> addr >> std::dec;
+			std::cout << "Word = 0x" << std::hex << mem.GetWordAtPointer(mem.GetPointerFromAddr(addr)) << "\n";
+			break;
+		case 'd':
+			arm9.DisplayRegisters();
+			break;
+		case 'b':
+			std::cout << "Enter program address to stop execution : 0x";
+			std::cin >> std::hex >> bpAddr >> std::dec;
+			std::cout << "Program will stop at address 0x" << std::hex << bpAddr << std::dec << "\n";
+			break;
+		case 'e':
+			pc = arm9.GetReg(REG_PC);
+			execInstr = 0;
+			start = high_resolution_clock::now();
+			while (pc != bpAddr) {
+				//std::cout << "PC : 0x" << std::hex << pc << std::dec << "\n";
+				arm9.DebugStep();
+				execInstr++;
+				pc = arm9.GetReg(REG_PC);
+				//std::cout << "R2 : 0x" << std::hex << arm9.GetReg(2) << std::dec << "\n";
+			}
+			end = high_resolution_clock::now();
+			std::cout << "Breakpoint at 0x" << std::hex << pc << std::dec << "\n";
+			std::cout << "Executed " << execInstr << " instructions in " << duration_cast<microseconds>(end - start).count() << "us \n";
+			break;
+		case 'h':
+			std::cout << "r: reset CPU\n";
+			std::cout << "s: single step / e: continuous execution (until breakpoint) / b: setup breakpoint address for continuous execution\n";
+			std::cout << "m: display a memory address / d: display registers\n";
+			std::cout << "q: exit program\n";
+			break;
+		case 'r':
+			arm9.Reset();
+			pc = arm9.GetReg(REG_PC);
+			std::cout << "PC : 0x" << std::hex << pc << std::dec << "\n";
+			std::cout << "CPU has been reset.\n";
+			break;
+		case 'q':
+			std::cout << "Exiting program.\n";
+			return 1;
+		}
+		
+		std::cout << "> ";
 	}
 
 	return 0;
