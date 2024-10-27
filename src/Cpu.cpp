@@ -67,23 +67,38 @@ std::string Cpu::eShiftTypeToString(eShiftType shift) {
 	}
 }
 
-std::string Cpu::eInstructCodeToString(eInstructCode instruct) {
+std::string Cpu::eInstructCodeToString(eInstructCode instruct, std::string &othertext) {
 	switch (instruct) {
 	default:
 	case INSTRUCT_NULL:
 		return "INSTRUCT_NULL";
-	case INSTRUCT_DATA_PROC_IMM_SHIFT:return "INSTRUCT_DATA_PROC_IMM_SHIFT";
-	case INSTRUCT_DATA_PROC_REG_SHIFT:return "INSTRUCT_DATA_PROC_REG_SHIFT";
-	case INSTRUCT_DATA_PROC_IMM:return "INSTRUCT_DATA_PROC_IMM";
-	case INSTRUCT_MOVE_IMM_STATUS_REG:return "INSTRUCT_MOVE_IMM_STATUS_REG";
-	case INSTRUCT_LOAD_STORE_IMM_OFFSET:return "INSTRUCT_LOAD_STORE_IMM_OFFSET";
-	case INSTRUCT_LOAD_STORE_REG_OFFSET:return "INSTRUCT_LOAD_STORE_REG_OFFSET";
-	case INSTRUCT_LOAD_STORE_MULTIPLE:return "INSTRUCT_LOAD_STORE_MULTIPLE";
-	case INSTRUCT_BRANCH_BRANCHLINK:return "INSTRUCT_BRANCH_BRANCHLINK";
-	case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:return "INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF";
-	case INSTRUCT_COPROC_DATA_PROC:return "INSTRUCT_COPROC_DATA_PROC";
-	case INSTRUCT_COPROC_REG_TRANSF:return "INSTRUCT_COPROC_REG_TRANSF";
-	case INSTRUCT_SOFTWARE_INTERRUPT:return "INSTRUCT_SOFTWARE_INTERRUPT";
+	case INSTRUCT_DATA_PROC_IMM_SHIFT:
+		othertext = " - " + eALUOpCodeToString(aluOpcode);
+		return "INSTRUCT_DATA_PROC_IMM_SHIFT";
+	case INSTRUCT_DATA_PROC_REG_SHIFT:
+		othertext = " - " + eALUOpCodeToString(aluOpcode);
+		return "INSTRUCT_DATA_PROC_REG_SHIFT";
+	case INSTRUCT_DATA_PROC_IMM:
+		othertext = " - " + eALUOpCodeToString(aluOpcode);
+		return "INSTRUCT_DATA_PROC_IMM";
+	case INSTRUCT_MOVE_IMM_STATUS_REG:
+		return "INSTRUCT_MOVE_IMM_STATUS_REG";
+	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
+		return "INSTRUCT_LOAD_STORE_IMM_OFFSET";
+	case INSTRUCT_LOAD_STORE_REG_OFFSET:
+		return "INSTRUCT_LOAD_STORE_REG_OFFSET";
+	case INSTRUCT_LOAD_STORE_MULTIPLE:
+		return "INSTRUCT_LOAD_STORE_MULTIPLE";
+	case INSTRUCT_BRANCH_BRANCHLINK:
+		return "INSTRUCT_BRANCH_BRANCHLINK";
+	case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:
+		return "INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF";
+	case INSTRUCT_COPROC_DATA_PROC:
+		return "INSTRUCT_COPROC_DATA_PROC";
+	case INSTRUCT_COPROC_REG_TRANSF:
+		return "INSTRUCT_COPROC_REG_TRANSF";
+	case INSTRUCT_SOFTWARE_INTERRUPT:
+		return "INSTRUCT_SOFTWARE_INTERRUPT";
 	}
 }
 
@@ -94,6 +109,8 @@ Cpu::Cpu() {
 	cpsr.bits.Mode = Supervisor;
 	cpsr.bits.I = 1;
 	cpsr.bits.F = 1;
+
+
 }
 
 bool Cpu::SetBootAddr(uint32_t bootAddr) {
@@ -155,7 +172,7 @@ void Cpu::SetReg(int regID, uint32_t value) {
 
 	if (GetCurrentCpuMode() == FIQ) {
 		reg_fiq[regID - 8] = value;
-		if (Debug) std::cout << "R" << regID-8 << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		return;
 	}
 	// Here, we are not in FIQ mode
@@ -175,23 +192,23 @@ void Cpu::SetReg(int regID, uint32_t value) {
 		break;
 	case Supervisor:
 		reg_svc[regID - 13] = value;
-		if (Debug) std::cout << "R" << regID - 13 << "(SVC) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(SVC) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case Abort:
 		reg_abt[regID - 13] = value;
-		if (Debug) std::cout << "R" << regID - 13 << "(ABT) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(ABT) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case IRQ:
 		reg_irq[regID - 13] = value;
-		if (Debug) std::cout << "R" << regID - 13 << "(IRQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(IRQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case Undefined:
 		reg_und[regID - 13] = value;
-		if (Debug) std::cout << "R" << regID - 13 << "(UND) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(UND) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	case FIQ:
 		reg_fiq[regID - 8] = value;
-		if (Debug) std::cout << "R" << regID - 8 << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+		if (Debug) std::cout << "R" << regID << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		break;
 	default:
 		throw EXCEPTION_REG_ACCESS_IN_UNKNWOWN_MODE;
@@ -254,10 +271,25 @@ void Cpu::Reset() {
 	cpsr.bits.I = 1;
 	cpsr.bits.F = 1;
 
+	memset(reg, 0, 16);
+	memset(reg_fiq, 0, 7);
+	memset(reg_svc, 0, 2);
+	memset(reg_abt, 0, 2);
+	memset(reg_und, 0, 2);
+	memset(reg_irq, 0, 2);
+
 	SetReg(REG_PC, bootAddress);
 }
 
 void Cpu::DebugStep() {
+	if (started) return;
+
+	Debug = true;
+	step();
+	Debug = false;
+}
+
+void Cpu::step() {
 	Fetch();
 	if (IsThumbMode()) {
 		throw "NO THUMB YET";
@@ -266,6 +298,40 @@ void Cpu::DebugStep() {
 		Decode();
 		Execute();
 	}
+}
+
+void Cpu::runThreadFunc() {
+	using namespace std::chrono;
+
+	execInstr = 0;
+	uint32_t pc = GetReg(REG_PC);
+	start = high_resolution_clock::now();
+	while (started) {
+		if (breakpoint.Check(pc)) {
+			started = false;
+			std::cout << "Breakpoint encounter, stopping.\n";
+			end = high_resolution_clock::now();
+			break;
+		}
+		step();
+		execInstr++;
+		pc = GetReg(REG_PC);
+	}
+	end = high_resolution_clock::now();
+
+	std::cout << "Executed " << execInstr << " instructions in " << duration_cast<microseconds>(end - start) << "\n";
+}
+
+void Cpu::Run() {
+	started = true;
+
+	// Start thread
+	runThread = std::thread(&Cpu::runThreadFunc, this);
+	runThread.detach();
+}
+
+void Cpu::Stop() {
+	started = false;
 }
 
 void Cpu::Fetch() {
@@ -283,110 +349,132 @@ void Cpu::Fetch() {
 void Cpu::Decode() {
 	decodedInstructCode = INSTRUCT_NULL;
 
-	if (IsDataProcImmShift(fetchedInstruction)) {
-		// Misc if opcode = 0b10XX
+	do {
+		if (IsDataProcImmShift(fetchedInstruction)) {
+			if (IsMiscellaneous(fetchedInstruction)) {
 
-		const sDataProcImmShift* instruction = reinterpret_cast<sDataProcImmShift*>(&fetchedInstruction);
-		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-		SetFlags = instruction->S != 0;
-		Rn = instruction->Rn;
-		Rd = instruction->Rd;
-		ShiftAmount = instruction->shiftAmount;
-		Shift = static_cast<eShiftType>(instruction->shift);
-		Rm = instruction->Rm;
+				break;
+			}
 
-		decodedInstructCode = INSTRUCT_DATA_PROC_IMM_SHIFT;
-	}
-	else if (IsDataProcRegShift(fetchedInstruction)) {
-		// Misc if opcode = 0b10XX
+			const sDataProcImmShift* instruction = reinterpret_cast<sDataProcImmShift*>(&fetchedInstruction);
+			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+			SetFlags = instruction->S != 0;
+			Rn = instruction->Rn;
+			Rd = instruction->Rd;
+			ShiftAmount = instruction->shiftAmount;
+			Shift = static_cast<eShiftType>(instruction->shift);
+			Rm = instruction->Rm;
 
-		const sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&fetchedInstruction);
-		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-		SetFlags = instruction->S != 0;
-		Rn = instruction->Rn;
-		Rd = instruction->Rd;
-		Rs = instruction->Rs;
-		Shift = static_cast<eShiftType>(instruction->shift);
-		Rm = instruction->Rm;
+			decodedInstructCode = INSTRUCT_DATA_PROC_IMM_SHIFT;
+		}
+		else if (IsDataProcRegShift(fetchedInstruction)) {
+			if (IsMiscellaneous(fetchedInstruction)) {
 
-		decodedInstructCode = INSTRUCT_DATA_PROC_REG_SHIFT;
-	}
-	// Multiplies/Extra LoadStore if bit7 = 1
-	else if (IsDataProcImm(fetchedInstruction)) {
-		// Undefined instruction if opcode = 0b10X0 & S = 0
-		// MoveImmToStatusReg if opcode = 0b10X1 & S = 0
+				break;
+			}
+			else if (IsMultipliesOrExtraLoadStore(fetchedInstruction)) {
 
-		const sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&fetchedInstruction);
-		aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-		SetFlags = instruction->S != 0;
-		Rn = instruction->Rn;
-		Rd = instruction->Rd;
-		Rotate = instruction->rotate;
-		Immediate = instruction->immediate;
+				break;
+			}
 
-		decodedInstructCode = INSTRUCT_DATA_PROC_IMM;
-	}
-	else if (IsMoveImmToStatusReg(fetchedInstruction)) {
-		const sMoveImmToStatusReg* instruction = reinterpret_cast<sMoveImmToStatusReg*>(&fetchedInstruction);
-		Mask = instruction->Mask;
-		Rotate = instruction->rotate;
-		Immediate = instruction->immediate;
+			const sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&fetchedInstruction);
+			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+			SetFlags = instruction->S != 0;
+			Rn = instruction->Rn;
+			Rd = instruction->Rd;
+			Rs = instruction->Rs;
+			Shift = static_cast<eShiftType>(instruction->shift);
+			Rm = instruction->Rm;
 
-		decodedInstructCode = INSTRUCT_MOVE_IMM_STATUS_REG;
-	}
-	else if (IsLoadStoreImmOffset(fetchedInstruction)) {
-		const sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&fetchedInstruction);
-		Rn = instruction->Rn;
-		Rd = instruction->Rd;
-		Immediate = instruction->immediate;
+			decodedInstructCode = INSTRUCT_DATA_PROC_REG_SHIFT;
+		}
+		else if (IsDataProcImm(fetchedInstruction)) {
+			if (IsUndefined(fetchedInstruction)) {
 
-		decodedInstructCode = INSTRUCT_LOAD_STORE_IMM_OFFSET;
-	}
-	else if (IsLoadStoreRegOffset(fetchedInstruction)) {
-		const sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&fetchedInstruction);
-		Rn = instruction->Rn;
-		Rd = instruction->Rd;
-		ShiftAmount = instruction->shiftAmount;
-		Shift = static_cast<eShiftType>(instruction->shift);
-		Rm = instruction->Rm;
+				break;
+			}
+			else if (IsMoveImmToStatusReg(fetchedInstruction)) {
+				const sMoveImmToStatusReg* instruction = reinterpret_cast<sMoveImmToStatusReg*>(&fetchedInstruction);
+				Mask = instruction->Mask;
+				Rotate = instruction->rotate;
+				Immediate = instruction->immediate;
 
-		decodedInstructCode = INSTRUCT_LOAD_STORE_REG_OFFSET;
-	}
-	// Media instruction if bit4 = 1
-	// ArchUndefined if .... ?
-	else if (IsLoadStoreMultiple(fetchedInstruction)) {
-		const sLoadStoreMultiple* instruction = reinterpret_cast<sLoadStoreMultiple*>(&fetchedInstruction);
-		Rn = instruction->Rn;
+				decodedInstructCode = INSTRUCT_MOVE_IMM_STATUS_REG;
+				break;
+			}
 
-		decodedInstructCode = INSTRUCT_LOAD_STORE_MULTIPLE;
-	}
-	else if (IsBranch(fetchedInstruction)) {
-		const sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&fetchedInstruction);
-		Offset = instruction->offset;
+			const sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&fetchedInstruction);
+			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
+			SetFlags = instruction->S != 0;
+			Rn = instruction->Rn;
+			Rd = instruction->Rd;
+			Rotate = instruction->rotate;
+			Immediate = instruction->immediate;
 
-		decodedInstructCode = INSTRUCT_BRANCH_BRANCHLINK;
-	}
-	else if (IsCoprocLoadStore_DoubleRegTransf(fetchedInstruction)) {
-		const sCoprocLoadStore_DoubleRegTransf* instruction = reinterpret_cast<sCoprocLoadStore_DoubleRegTransf*>(&fetchedInstruction);
-		Rn = instruction->Rn;
-		Offset = instruction->offset;
+			decodedInstructCode = INSTRUCT_DATA_PROC_IMM;
+		}
+		else if (IsLoadStoreImmOffset(fetchedInstruction)) {
+			const sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&fetchedInstruction);
+			Rn = instruction->Rn;
+			Rd = instruction->Rd;
+			Immediate = instruction->immediate;
 
-		decodedInstructCode = INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF;
-	}
-	else if (IsCoprocRegTransf(fetchedInstruction)) {
-		decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
-	}
-	else if (IsCoprocRegTransf(fetchedInstruction)) {
-		decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
-	}
-	else if (IsSoftwareInterrupt(fetchedInstruction)) {
-		decodedInstructCode = INSTRUCT_SOFTWARE_INTERRUPT;
-	}
-	else if (IsConditionReserved(fetchedInstruction)) {
+			decodedInstructCode = INSTRUCT_LOAD_STORE_IMM_OFFSET;
+		}
+		else if (IsLoadStoreRegOffset(fetchedInstruction)) {
+			if (IsMedia(fetchedInstruction)) {
 
-	}
+				break;
+			}
+			else if (IsArchUndefined(fetchedInstruction)) {
 
-	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(decodedInstructCode) << "\n";
+				break;
+			}
+
+			const sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&fetchedInstruction);
+			Rn = instruction->Rn;
+			Rd = instruction->Rd;
+			ShiftAmount = instruction->shiftAmount;
+			Shift = static_cast<eShiftType>(instruction->shift);
+			Rm = instruction->Rm;
+
+			decodedInstructCode = INSTRUCT_LOAD_STORE_REG_OFFSET;
+		}
+		else if (IsLoadStoreMultiple(fetchedInstruction)) {
+			const sLoadStoreMultiple* instruction = reinterpret_cast<sLoadStoreMultiple*>(&fetchedInstruction);
+			Rn = instruction->Rn;
+
+			decodedInstructCode = INSTRUCT_LOAD_STORE_MULTIPLE;
+		}
+		else if (IsBranch(fetchedInstruction)) {
+			const sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&fetchedInstruction);
+			Offset = instruction->offset;
+
+			decodedInstructCode = INSTRUCT_BRANCH_BRANCHLINK;
+		}
+		else if (IsCoprocLoadStore_DoubleRegTransf(fetchedInstruction)) {
+			const sCoprocLoadStore_DoubleRegTransf* instruction = reinterpret_cast<sCoprocLoadStore_DoubleRegTransf*>(&fetchedInstruction);
+			Rn = instruction->Rn;
+			Offset = instruction->offset;
+
+			decodedInstructCode = INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF;
+		}
+		else if (IsCoprocRegTransf(fetchedInstruction)) {
+			decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+		}
+		else if (IsCoprocRegTransf(fetchedInstruction)) {
+			decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+		}
+		else if (IsSoftwareInterrupt(fetchedInstruction)) {
+			decodedInstructCode = INSTRUCT_SOFTWARE_INTERRUPT;
+		}
+		else if (IsUnconditional(fetchedInstruction)) {
+
+		}
+	} while (false);
+
+	std::string othertext = "";
+	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(decodedInstructCode, othertext) << othertext << "\n";
 }
 
 void Cpu::Execute() {
@@ -440,6 +528,53 @@ void Cpu::Execute() {
 
 	//	break;
 	}
+}
+
+bool Cpu::IsRunning() const {
+	return started;
+}
+
+void Cpu::DisplayBreakpoints() {
+	uint32_t addr{ 0 };
+
+	int breakpointsNumber = breakpoint.GetSize();
+
+	if (breakpointsNumber == 0) {
+		std::cout << "No breakpoint\n";
+		return;
+	}
+
+	for (int i = 0; i < breakpointsNumber; i++) {
+		bool result = breakpoint.GetAddr(i, addr);
+		std::cout << i << " - ";
+		if (result) {
+			std::cout << "at 0x" << std::hex << addr << std::dec << " - ";
+		}
+		else {
+			std::cout << "(UNKNOWN ADDR) - ";
+		}
+		if (breakpoint.IsActive(i)) {
+			std::cout << "ACTIVE";
+		}
+		else {
+			std::cout << "INACTIVE";
+		}
+		if (i == 0) std::cout << " (parent)";
+		std::cout << "\n";
+	}
+}
+
+bool Cpu::SetBreakpoint(uint32_t address) {
+	return breakpoint.Add(address);
+}
+
+bool Cpu::ToggleBreakpoint(int index) {
+	bool active = breakpoint.IsActive(index);
+	return breakpoint.SetActive(index, !active);
+}
+
+bool Cpu::RemoveBreakpoint(int index) {
+	return breakpoint.Remove(index);
 }
 
 bool Cpu::IsConditionOK(uint32_t opcode) const {
@@ -643,7 +778,7 @@ void Cpu::DataProcImmShift(uint32_t opcode) {
 
 	Operand = AluBitShift(Shift, Rm_value, ShiftAmount, SetFlags);
 
-	if (AluExecute(aluOpcode, Rd, Rn, Operand, SetFlags)) {
+	if (AluExecute(aluOpcode, Rd_value, Rn, Operand, SetFlags)) {
 		SetReg(Rd, Rd_value);
 	}
 }

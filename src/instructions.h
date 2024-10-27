@@ -96,6 +96,8 @@ static_assert(sizeof(sDataProcImmShift) == 4, "DataProcImmShift size is not 4");
 
 bool IsDataProcImmShift(uint32_t opcode);
 
+bool IsMiscellaneous(uint32_t opcode);
+
 union sDataProcRegShift {
 	struct {
 		uint32_t Rm : 4;
@@ -117,6 +119,8 @@ static_assert(sizeof(sDataProcRegShift) == 4, "DataProcRegShift size is not 4");
 
 bool IsDataProcRegShift(uint32_t opcode);
 
+bool IsMultipliesOrExtraLoadStore(uint32_t opcode);
+
 union sDataProcImm {
 	struct {
 		uint32_t immediate : 8;
@@ -134,6 +138,8 @@ union sDataProcImm {
 static_assert(sizeof(sDataProcImm) == 4, "DataProcImm size is not 4");
 
 bool IsDataProcImm(uint32_t opcode);
+
+bool IsUndefined(uint32_t opcode);
 
 union sMoveImmToStatusReg {
 	struct {
@@ -195,6 +201,9 @@ union sLoadStoreRegOffset {
 static_assert(sizeof(sLoadStoreRegOffset) == 4, "LoadStoreRegOffset size is not 4");
 
 bool IsLoadStoreRegOffset(uint32_t opcode);
+
+bool IsMedia(uint32_t opcode);
+bool IsArchUndefined(uint32_t opcode);
 
 union sLoadStoreMultiple {
 	struct {
@@ -301,5 +310,7 @@ union sSoftwareInterrupt {
 static_assert(sizeof(sSoftwareInterrupt) == 4, "SoftwareInterrupt size is not 4");
 
 bool IsSoftwareInterrupt(uint32_t opcode);
+
+bool IsUnconditional(uint32_t opcode);
 
 #pragma pack(pop)

@@ -15,19 +15,38 @@ bool IsDataProcImmShift(uint32_t opcode) {
 		(!IsConditionReserved(opcode));
 }
 
+bool IsMiscellaneous(uint32_t opcode) {
+	sDataProcImmShift* instruction = reinterpret_cast<sDataProcImmShift*>(&opcode);
+
+	return ((instruction->opcode & 0b1100) == 0b1000) && (instruction->S == 0) &&
+		((((instruction->shiftAmount & 0x1) == 0) && (instruction->mustbe0 == 1)) || (instruction->mustbe0 == 0));
+}
+
 bool IsDataProcRegShift(uint32_t opcode) {
 	sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&opcode);
 
 	return (instruction->mustbe000 == 0) &&
-		(instruction->mustbe0 == 0) &&
+		/*(instruction->mustbe0 == 0) &&*/
 		(instruction->mustbe1 == 1) &&
 		(!IsConditionReserved(opcode));
+}
+
+bool IsMultipliesOrExtraLoadStore(uint32_t opcode) {
+	sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&opcode);
+
+	return (instruction->mustbe0 == 1);
 }
 
 bool IsDataProcImm(uint32_t opcode) {
 	sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&opcode);
 
 	return (instruction->mustbe001 == 1) && (!IsConditionReserved(opcode));
+}
+
+bool IsUndefined(uint32_t opcode) {
+	sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&opcode);
+
+	return ((instruction->opcode & 0b1101) == 0b1000) && (instruction->S == 0);
 }
 
 bool IsMoveImmToStatusReg(uint32_t opcode) {
@@ -49,8 +68,21 @@ bool IsLoadStoreRegOffset(uint32_t opcode) {
 	sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
 
 	return (instruction->mustbe011 == 0b011) &&
-		(instruction->mustbe0 == 0) &&
+		/*(instruction->mustbe0 == 0) &&*/
 		(!IsConditionReserved(opcode));
+}
+
+bool IsMedia(uint32_t opcode) {
+	sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
+
+	return (instruction->mustbe0 == 1) && (!IsArchUndefined(opcode));
+}
+
+bool IsArchUndefined(uint32_t opcode) {
+	sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
+
+	return (instruction->P == 1) && (instruction->U == 1) && (instruction->B == 1) && (instruction->W == 1) && (instruction->L == 1) &&
+		((instruction->shiftAmount&0x1)==1) && (instruction->shift == 0b11) && (instruction->mustbe0 == 1);
 }
 
 bool IsLoadStoreMultiple(uint32_t opcode) {
@@ -89,4 +121,8 @@ bool IsSoftwareInterrupt(uint32_t opcode) {
 	sSoftwareInterrupt* instruction = reinterpret_cast<sSoftwareInterrupt*>(&opcode);
 
 	return (instruction->mustbe1111 == 0b1111) && (!IsConditionReserved(opcode));
+}
+
+bool IsUnconditional(uint32_t opcode) {
+	return IsConditionReserved(opcode);
 }

@@ -3,8 +3,11 @@
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
+#include <thread>
+#include <chrono>
 #include "arm_mem.h"
 #include "instructions.h"
+#include "breakpoints.h"
 
 constexpr auto REG_SP = 13;
 constexpr auto REG_LR = 14;
@@ -58,9 +61,17 @@ class Cpu {
 private:
 	ARM_mem* memory;
 
-	bool started{ false };
-
 	uint32_t bootAddress{ 0 };
+
+	std::thread runThread;
+	bool started{ false };
+	Breakpoint breakpoint;
+	uint64_t execInstr{ 0 };
+	std::chrono::steady_clock::time_point end;
+	std::chrono::steady_clock::time_point start;
+
+	void runThreadFunc();
+	void step();
 
 	// Registers
 	uint32_t reg[16]{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
@@ -176,16 +187,37 @@ public:
 	void Reset();
 
 	/// <summary>
+	/// Start executing instructions
+	/// </summary>
+	void Run();
+
+	/// <summary>
+	/// Stop executing instructions
+	/// </summary>
+	void Stop();
+
+	/// <summary>
+	/// 
+	/// </summary>
+	/// <returns>True if instructions are executed, else false</returns>
+	bool IsRunning() const;
+
+	/// <summary>
 	/// Execute Fetch/Decode/Execute all at ones, one time
 	/// </summary>
 	void DebugStep();
 
 	uint32_t GetReg(int regID);
 
-	static std::string eConditionToString(eCondition cond);
-	static std::string eALUOpCodeToString(eALUOpCode aluOpcode);
-	static std::string eShiftTypeToString(eShiftType shift);
-	static std::string eInstructCodeToString(eInstructCode instruct);
+	std::string eConditionToString(eCondition cond);
+	std::string eALUOpCodeToString(eALUOpCode aluOpcode);
+	std::string eShiftTypeToString(eShiftType shift);
+	std::string eInstructCodeToString(eInstructCode instruct, std::string &othertext);
 
 	void DisplayRegisters();
+
+	void DisplayBreakpoints();
+	bool SetBreakpoint(uint32_t address);
+	bool ToggleBreakpoint(int index);
+	bool RemoveBreakpoint(int index);
 };

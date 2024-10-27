@@ -8,6 +8,7 @@
 #include "arm7_mem.h"
 #include "arm9_mem.h"
 
+#include <process.h>
 #include <iostream>
 #include <fstream>
 #include <chrono>
