@@ -39,7 +39,7 @@ int main()
 	std::cout << "=============================" << "\n";
 	std::cout << "\n";
 
-	NDSRom nds("NDS-Files\\TinyFB.nds");
+	NDSRom nds("..\\NDS-Files\\TinyFB.nds");
 
 	std::cout << "CPU : arm9\n";
 	if (nds.IsOpened()) {
@@ -53,7 +53,7 @@ int main()
 	arm9.SetMMU(&mem);
 	InitArm9Memory(mem);
 	nds.SetARM9ProgramMemory(mem);
-	//LoadARM9BIOS(mem, "NDS-Files\\Bios\\biosnds9.rom");
+	//LoadARM9BIOS(mem, "..\\NDS-Files\\Bios\\biosnds9.rom");
 	//arm9.SetBootAddr(mem.BIOS_ADDR);
 	arm9.SetBootAddr(nds.GetARM9StartAddress());
 
