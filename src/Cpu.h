@@ -88,9 +88,8 @@ private:
 	CPSR spsr_irq{ 0 };
 	CPSR spsr_und{ 0 };
 
-	// Private members for instructions
-	uint32_t fetchedInstruction{ 0 };
-	eInstructCode decodedInstructCode{ INSTRUCT_NULL };
+	// Private members for instruction pointers
+	Instruction instruction;
 
 	eALUOpCode aluOpcode{ 0 };
 	bool SetFlags{ false };
@@ -115,6 +114,7 @@ private:
 	}
 
 	void SetReg(int regID, uint32_t value);
+	void SetPCReg(uint32_t value);
 
 	void SaveCPSR();
 	void RestoreCPSR();
@@ -123,15 +123,15 @@ private:
 	void Decode();
 	void Execute();
 
-	bool IsConditionOK(uint32_t opcode) const;
+	bool IsConditionOK() const;
 
 	// Branch
-	void Branch(uint32_t opcode);
+	void Branch(sBranchInstruction* instruction);
 
 	// Data processing
-	void DataProcImmShift(uint32_t opcode);
-	void DataProcRegShift(uint32_t opcode);
-	void DataProcImm(uint32_t opcode);
+	void DataProcImmShift();
+	void DataProcRegShift();
+	void DataProcImm();
 	bool AluExecute(eALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
 	uint32_t AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
 
@@ -140,22 +140,22 @@ private:
 	// Misc arithmetic (CLZ)
 
 	// Status register access
-	void MoveImmToStatusReg(uint32_t opcode);
+	void MoveImmToStatusReg(sMoveImmToStatusReg* instruction);
 
 	// Load and store
-	void LoadStoreImmOffset(uint32_t opcode);
-	void LoadStoreRegOffset(uint32_t opcode);
-	void LoadStoreMultiple(uint32_t opcode);
+	void LoadStoreImmOffset(sLoadStoreImmOffset* instruction);
+	void LoadStoreRegOffset(sLoadStoreImmOffset* instruction);
+	void LoadStoreMultiple(sLoadStoreMultiple* instruction);
 
 	// Semaphore
 
 	// Exeption-generating
-	void SoftwareInterrupt(uint32_t opcode);
+	void SoftwareInterrupt(sSoftwareInterrupt* instruction);
 
 	// Coprocessor
-	void CoprocLoadStore_DoubleRegTransf(uint32_t opcode);
-	void CoprocDataProc(uint32_t opcode);
-	void CoprocRegTransf(uint32_t opcode);
+	void CoprocLoadStore_DoubleRegTransf(sCoprocLoadStore_DoubleRegTransf* instruction);
+	void CoprocDataProc(sCoprocDataProc* instruction);
+	void CoprocRegTransf(sCoprocRegTransf* instruction);
 
 public:
 	bool Debug{ false };

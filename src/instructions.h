@@ -24,8 +24,6 @@ enum eCondition : uint8_t {
 	rsv		// Reserved (previously never)
 };
 
-bool IsConditionReserved(uint32_t opcode);
-
 enum eALUOpCode : uint8_t {
 	AND = 0,	// Rd = Rn & Op2 (and)
 	EOR,		// Rd = Rn ^ Op2 (xor)
@@ -94,10 +92,6 @@ union sDataProcImmShift {
 
 static_assert(sizeof(sDataProcImmShift) == 4, "DataProcImmShift size is not 4");
 
-bool IsDataProcImmShift(uint32_t opcode);
-
-bool IsMiscellaneous(uint32_t opcode);
-
 union sDataProcRegShift {
 	struct {
 		uint32_t Rm : 4;
@@ -117,10 +111,6 @@ union sDataProcRegShift {
 
 static_assert(sizeof(sDataProcRegShift) == 4, "DataProcRegShift size is not 4");
 
-bool IsDataProcRegShift(uint32_t opcode);
-
-bool IsMultipliesOrExtraLoadStore(uint32_t opcode);
-
 union sDataProcImm {
 	struct {
 		uint32_t immediate : 8;
@@ -137,10 +127,6 @@ union sDataProcImm {
 
 static_assert(sizeof(sDataProcImm) == 4, "DataProcImm size is not 4");
 
-bool IsDataProcImm(uint32_t opcode);
-
-bool IsUndefined(uint32_t opcode);
-
 union sMoveImmToStatusReg {
 	struct {
 		uint32_t immediate : 8;
@@ -156,8 +142,6 @@ union sMoveImmToStatusReg {
 };
 
 static_assert(sizeof(sMoveImmToStatusReg) == 4, "MoveImmToStatusReg size is not 4");
-
-bool IsMoveImmToStatusReg(uint32_t opcode);
 
 union sLoadStoreImmOffset {
 	struct {
@@ -176,8 +160,6 @@ union sLoadStoreImmOffset {
 };
 
 static_assert(sizeof(sLoadStoreImmOffset) == 4, "LoadStoreImmOffset size is not 4");
-
-bool IsLoadStoreImmOffset(uint32_t opcode);
 
 union sLoadStoreRegOffset {
 	struct {
@@ -200,11 +182,6 @@ union sLoadStoreRegOffset {
 
 static_assert(sizeof(sLoadStoreRegOffset) == 4, "LoadStoreRegOffset size is not 4");
 
-bool IsLoadStoreRegOffset(uint32_t opcode);
-
-bool IsMedia(uint32_t opcode);
-bool IsArchUndefined(uint32_t opcode);
-
 union sLoadStoreMultiple {
 	struct {
 		uint32_t registerList : 16; // bit0 for R0, bit1 for R1, ..., bit15 for R15(PC)
@@ -222,8 +199,6 @@ union sLoadStoreMultiple {
 
 static_assert(sizeof(sLoadStoreMultiple) == 4, "LoadStoreMultiple size is not 4");
 
-bool IsLoadStoreMultiple(uint32_t opcode);
-
 union sBranchInstruction {
 	struct {
 		uint32_t offset : 24;
@@ -235,8 +210,6 @@ union sBranchInstruction {
 };
 
 static_assert(sizeof(sBranchInstruction) == 4, "BranchInstruction size is not 4");
-
-bool IsBranch(uint32_t opcode);
 
 union sCoprocLoadStore_DoubleRegTransf {
 	struct {
@@ -257,8 +230,6 @@ union sCoprocLoadStore_DoubleRegTransf {
 
 static_assert(sizeof(sCoprocLoadStore_DoubleRegTransf) == 4, "CoprocLoadStore_DoubleRegTransf size is not 4");
 
-bool IsCoprocLoadStore_DoubleRegTransf(uint32_t opcode);
-
 union sCoprocDataProc {
 	struct {
 		uint32_t CRm : 4;
@@ -275,8 +246,6 @@ union sCoprocDataProc {
 };
 
 static_assert(sizeof(sCoprocDataProc) == 4, "CoprocDataProc size is not 4");
-
-bool IsCoprocDataProc(uint32_t opcode);
 
 union sCoprocRegTransf {
 	struct {
@@ -296,8 +265,6 @@ union sCoprocRegTransf {
 
 static_assert(sizeof(sCoprocRegTransf) == 4, "CoprocRegTransf size is not 4");
 
-bool IsCoprocRegTransf(uint32_t opcode);
-
 union sSoftwareInterrupt {
 	struct {
 		uint32_t swiNumber : 24;
@@ -309,8 +276,71 @@ union sSoftwareInterrupt {
 
 static_assert(sizeof(sSoftwareInterrupt) == 4, "SoftwareInterrupt size is not 4");
 
-bool IsSoftwareInterrupt(uint32_t opcode);
-
-bool IsUnconditional(uint32_t opcode);
 
 #pragma pack(pop)
+
+class Instruction {
+private:
+	uint32_t opcode{ 0 };
+public:
+	eInstructCode decodedInstructCode{ INSTRUCT_NULL };
+
+	sInstruction* pInstruction;
+	sDataProcImmShift* pDataProcImmShift;
+	sDataProcRegShift* pDataProcRegShift;
+	sDataProcImm* pDataProcImm;
+	sMoveImmToStatusReg* pMoveImmToStatusReg;
+	sLoadStoreImmOffset* pLoadStoreImmOffset;
+	sLoadStoreRegOffset* pLoadStoreRegOffset;
+	sLoadStoreMultiple* pLoadStoreMultiple;
+	sBranchInstruction* pBranchInstruction;
+	sCoprocLoadStore_DoubleRegTransf* pCoprocLoadStore_DoubleRegTransf;
+	sCoprocDataProc* pCoprocDataProc;
+	sCoprocRegTransf* pCoprocRegTransf;
+	sSoftwareInterrupt* pSoftwareInterrupt;
+
+	Instruction();
+
+	void Set(uint32_t opcode);
+	const uint32_t Get() const;
+
+	void DecodeReset();
+	void SetDecode(eInstructCode instruct);
+	const eInstructCode GetDecode() const;
+
+	// Decoders
+
+	bool IsUnconditional() const;
+	bool IsConditionReserved() const;
+
+	bool IsDataProcImmShift() const;
+	bool IsMiscellaneous() const;
+
+	bool IsDataProcRegShift() const;
+	bool IsMultipliesOrExtraLoadStore() const;
+
+	bool IsDataProcImm() const;
+	bool IsUndefined() const;
+
+	bool IsMoveImmToStatusReg() const;
+
+	bool IsLoadStoreImmOffset() const;
+
+	bool IsLoadStoreRegOffset() const;
+	bool IsMedia() const;
+	bool IsArchUndefined() const;
+
+	bool IsLoadStoreMultiple() const;
+
+	bool IsBranch() const;
+
+	bool IsCoprocLoadStore_DoubleRegTransf() const;
+
+	bool IsCoprocDataProc() const;
+
+	bool IsCoprocRegTransf() const;
+
+	bool IsSoftwareInterrupt() const;
+
+	// Getters
+};

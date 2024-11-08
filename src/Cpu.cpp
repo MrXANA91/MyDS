@@ -161,6 +161,11 @@ uint32_t Cpu::GetReg(int regID) {
 }
 
 void Cpu::SetReg(int regID, uint32_t value) {
+	if (regID == 15) {
+		SetPCReg(value);
+		return;
+	}
+
 	if ((regID < 0) || (regID > 15)) throw EXCEPTION_REG_ACCESS_OUT_OF_RANGE;
 
 	if ((regID < 8 || regID == 15)) {
@@ -213,6 +218,13 @@ void Cpu::SetReg(int regID, uint32_t value) {
 	default:
 		throw EXCEPTION_REG_ACCESS_IN_UNKNWOWN_MODE;
 	}
+}
+
+void Cpu::SetPCReg(uint32_t value) {
+	reg[15] = value;
+	if (Debug) std::cout << "PC := " << value << "(0x" << std::hex << value << std::dec << ")\n";
+
+	// TODO : PC has been changed, fetch-decode-execute cycle must be reset
 }
 
 void Cpu::SaveCPSR() {
@@ -309,8 +321,6 @@ void Cpu::runThreadFunc() {
 	while (started) {
 		if (breakpoint.Check(pc)) {
 			started = false;
-			std::cout << "Breakpoint encounter, stopping.\n";
-			end = high_resolution_clock::now();
 			break;
 		}
 		step();
@@ -319,6 +329,7 @@ void Cpu::runThreadFunc() {
 	}
 	end = high_resolution_clock::now();
 
+	std::cout << "Stopping.\n";
 	std::cout << "Executed " << execInstr << " instructions in " << duration_cast<microseconds>(end - start) << "\n";
 }
 
@@ -338,143 +349,135 @@ void Cpu::Fetch() {
 	uint8_t* ptr = memory->GetPointerFromAddr(GetReg(REG_PC));
 	int opsize = (IsThumbMode()) ? 2 : 4;
 
-	fetchedInstruction = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
+	uint32_t fetchedInstruction = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
+	instruction.Set(fetchedInstruction);
 	if (Debug) std::cout << "Instruction = 0x" << std::hex << fetchedInstruction << std::dec;
-	if (Debug) std::cout << " - Condition : " << eConditionToString(static_cast<eCondition>(reinterpret_cast<sInstruction*>(&fetchedInstruction)->condition));
+	if (Debug) std::cout << " - Condition : " << eConditionToString(static_cast<eCondition>(instruction.pInstruction->condition));
 	if (Debug) std::cout << "\n";
 
 	SetReg(REG_PC, GetReg(REG_PC) + opsize);
 }
 
 void Cpu::Decode() {
-	decodedInstructCode = INSTRUCT_NULL;
+	instruction.DecodeReset();
 
 	do {
-		if (IsDataProcImmShift(fetchedInstruction)) {
-			if (IsMiscellaneous(fetchedInstruction)) {
+		if (instruction.IsDataProcImmShift()) {
+			if (instruction.IsMiscellaneous()) {
 
 				break;
 			}
 
-			const sDataProcImmShift* instruction = reinterpret_cast<sDataProcImmShift*>(&fetchedInstruction);
-			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-			SetFlags = instruction->S != 0;
-			Rn = instruction->Rn;
-			Rd = instruction->Rd;
-			ShiftAmount = instruction->shiftAmount;
-			Shift = static_cast<eShiftType>(instruction->shift);
-			Rm = instruction->Rm;
+			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImmShift->opcode);
+			SetFlags = this->instruction.pDataProcImmShift->S != 0;
+			Rn = this->instruction.pDataProcImmShift->Rn;
+			Rd = this->instruction.pDataProcImmShift->Rd;
+			ShiftAmount = this->instruction.pDataProcImmShift->shiftAmount;
+			Shift = static_cast<eShiftType>(this->instruction.pDataProcImmShift->shift);
+			Rm = this->instruction.pDataProcImmShift->Rm;
 
-			decodedInstructCode = INSTRUCT_DATA_PROC_IMM_SHIFT;
+			this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM_SHIFT);
 		}
-		else if (IsDataProcRegShift(fetchedInstruction)) {
-			if (IsMiscellaneous(fetchedInstruction)) {
+		else if (instruction.IsDataProcRegShift()) {
+			if (instruction.IsMiscellaneous()) {
 
 				break;
 			}
-			else if (IsMultipliesOrExtraLoadStore(fetchedInstruction)) {
-
-				break;
-			}
-
-			const sDataProcRegShift* instruction = reinterpret_cast<sDataProcRegShift*>(&fetchedInstruction);
-			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-			SetFlags = instruction->S != 0;
-			Rn = instruction->Rn;
-			Rd = instruction->Rd;
-			Rs = instruction->Rs;
-			Shift = static_cast<eShiftType>(instruction->shift);
-			Rm = instruction->Rm;
-
-			decodedInstructCode = INSTRUCT_DATA_PROC_REG_SHIFT;
-		}
-		else if (IsDataProcImm(fetchedInstruction)) {
-			if (IsUndefined(fetchedInstruction)) {
-
-				break;
-			}
-			else if (IsMoveImmToStatusReg(fetchedInstruction)) {
-				const sMoveImmToStatusReg* instruction = reinterpret_cast<sMoveImmToStatusReg*>(&fetchedInstruction);
-				Mask = instruction->Mask;
-				Rotate = instruction->rotate;
-				Immediate = instruction->immediate;
-
-				decodedInstructCode = INSTRUCT_MOVE_IMM_STATUS_REG;
-				break;
-			}
-
-			const sDataProcImm* instruction = reinterpret_cast<sDataProcImm*>(&fetchedInstruction);
-			aluOpcode = static_cast<eALUOpCode>(instruction->opcode);
-			SetFlags = instruction->S != 0;
-			Rn = instruction->Rn;
-			Rd = instruction->Rd;
-			Rotate = instruction->rotate;
-			Immediate = instruction->immediate;
-
-			decodedInstructCode = INSTRUCT_DATA_PROC_IMM;
-		}
-		else if (IsLoadStoreImmOffset(fetchedInstruction)) {
-			const sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&fetchedInstruction);
-			Rn = instruction->Rn;
-			Rd = instruction->Rd;
-			Immediate = instruction->immediate;
-
-			decodedInstructCode = INSTRUCT_LOAD_STORE_IMM_OFFSET;
-		}
-		else if (IsLoadStoreRegOffset(fetchedInstruction)) {
-			if (IsMedia(fetchedInstruction)) {
-
-				break;
-			}
-			else if (IsArchUndefined(fetchedInstruction)) {
+			else if (instruction.IsMultipliesOrExtraLoadStore()) {
 
 				break;
 			}
 
-			const sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&fetchedInstruction);
-			Rn = instruction->Rn;
-			Rd = instruction->Rd;
-			ShiftAmount = instruction->shiftAmount;
-			Shift = static_cast<eShiftType>(instruction->shift);
-			Rm = instruction->Rm;
+			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcRegShift->opcode);
+			SetFlags = this->instruction.pDataProcRegShift->S != 0;
+			Rn = this->instruction.pDataProcRegShift->Rn;
+			Rd = this->instruction.pDataProcRegShift->Rd;
+			Rs = this->instruction.pDataProcRegShift->Rs;
+			Shift = static_cast<eShiftType>(this->instruction.pDataProcRegShift->shift);
+			Rm = this->instruction.pDataProcRegShift->Rm;
 
-			decodedInstructCode = INSTRUCT_LOAD_STORE_REG_OFFSET;
+			this->instruction.SetDecode(INSTRUCT_DATA_PROC_REG_SHIFT);
 		}
-		else if (IsLoadStoreMultiple(fetchedInstruction)) {
-			const sLoadStoreMultiple* instruction = reinterpret_cast<sLoadStoreMultiple*>(&fetchedInstruction);
-			Rn = instruction->Rn;
+		else if (instruction.IsDataProcImm()) {
+			if (instruction.IsUndefined()) {
 
-			decodedInstructCode = INSTRUCT_LOAD_STORE_MULTIPLE;
-		}
-		else if (IsBranch(fetchedInstruction)) {
-			const sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&fetchedInstruction);
-			Offset = instruction->offset;
+				break;
+			}
+			else if (instruction.IsMoveImmToStatusReg()) {
+				Mask = this->instruction.pMoveImmToStatusReg->Mask;
+				Rotate = this->instruction.pMoveImmToStatusReg->rotate;
+				Immediate = this->instruction.pMoveImmToStatusReg->immediate;
 
-			decodedInstructCode = INSTRUCT_BRANCH_BRANCHLINK;
-		}
-		else if (IsCoprocLoadStore_DoubleRegTransf(fetchedInstruction)) {
-			const sCoprocLoadStore_DoubleRegTransf* instruction = reinterpret_cast<sCoprocLoadStore_DoubleRegTransf*>(&fetchedInstruction);
-			Rn = instruction->Rn;
-			Offset = instruction->offset;
+				this->instruction.SetDecode(INSTRUCT_MOVE_IMM_STATUS_REG);
+				break;
+			}
 
-			decodedInstructCode = INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF;
+			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImm->opcode);
+			SetFlags = this->instruction.pDataProcImm->S != 0;
+			Rn = this->instruction.pDataProcImm->Rn;
+			Rd = this->instruction.pDataProcImm->Rd;
+			Rotate = this->instruction.pDataProcImm->rotate;
+			Immediate = this->instruction.pDataProcImm->immediate;
+
+			this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM);
 		}
-		else if (IsCoprocRegTransf(fetchedInstruction)) {
-			decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+		else if (instruction.IsLoadStoreImmOffset()) {
+			Rn = this->instruction.pLoadStoreImmOffset->Rn;
+			Rd = this->instruction.pLoadStoreImmOffset->Rd;
+			Immediate = this->instruction.pLoadStoreImmOffset->immediate;
+
+			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_IMM_OFFSET);
 		}
-		else if (IsCoprocRegTransf(fetchedInstruction)) {
-			decodedInstructCode = INSTRUCT_COPROC_REG_TRANSF;
+		else if (instruction.IsLoadStoreRegOffset()) {
+			if (instruction.IsMedia()) {
+
+				break;
+			}
+			else if (instruction.IsArchUndefined()) {
+
+				break;
+			}
+
+			Rn = this->instruction.pLoadStoreRegOffset->Rn;
+			Rd = this->instruction.pLoadStoreRegOffset->Rd;
+			ShiftAmount = this->instruction.pLoadStoreRegOffset->shiftAmount;
+			Shift = static_cast<eShiftType>(this->instruction.pLoadStoreRegOffset->shift);
+			Rm = this->instruction.pLoadStoreRegOffset->Rm;
+
+			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_REG_OFFSET);
 		}
-		else if (IsSoftwareInterrupt(fetchedInstruction)) {
-			decodedInstructCode = INSTRUCT_SOFTWARE_INTERRUPT;
+		else if (instruction.IsLoadStoreMultiple()) {
+			Rn = this->instruction.pLoadStoreMultiple->Rn;
+
+			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_MULTIPLE);
 		}
-		else if (IsUnconditional(fetchedInstruction)) {
+		else if (instruction.IsBranch()) {
+			Offset = this->instruction.pBranchInstruction->offset;
+
+			this->instruction.SetDecode(INSTRUCT_BRANCH_BRANCHLINK);
+		}
+		else if (instruction.IsCoprocLoadStore_DoubleRegTransf()) {
+			Rn = this->instruction.pCoprocLoadStore_DoubleRegTransf->Rn;
+			Offset = this->instruction.pCoprocLoadStore_DoubleRegTransf->offset;
+
+			this->instruction.SetDecode(INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF);
+		}
+		else if (instruction.IsCoprocRegTransf()) {
+			this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
+		}
+		else if (instruction.IsCoprocRegTransf()) {
+			this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
+		}
+		else if (instruction.IsSoftwareInterrupt()) {
+			this->instruction.SetDecode(INSTRUCT_SOFTWARE_INTERRUPT);
+		}
+		else if (instruction.IsUnconditional()) {
 
 		}
 	} while (false);
 
 	std::string othertext = "";
-	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(decodedInstructCode, othertext) << othertext << "\n";
+	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(this->instruction.GetDecode(), othertext) << othertext << "\n";
 }
 
 void Cpu::Execute() {
@@ -486,34 +489,36 @@ void Cpu::Execute() {
 	}
 	catch (int) {}
 
-	switch (decodedInstructCode) {
+	uint32_t fetchedInstruction = this->instruction.Get();
+
+	switch (this->instruction.GetDecode()) {
 	default:
 	case INSTRUCT_NULL:
 
 		break;
 	case INSTRUCT_DATA_PROC_IMM_SHIFT:
-		DataProcImmShift(fetchedInstruction);
+		DataProcImmShift();
 		break;
 	case INSTRUCT_DATA_PROC_REG_SHIFT:
-		DataProcRegShift(fetchedInstruction);
+		DataProcRegShift();
 		break;
 	case INSTRUCT_DATA_PROC_IMM:
-		DataProcImm(fetchedInstruction);
+		DataProcImm();
 		break;
 	//case INSTRUCT_MOVE_IMM_STATUS_REG:
 
 		//break;
 	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
-		LoadStoreImmOffset(fetchedInstruction);
+		LoadStoreImmOffset(this->instruction.pLoadStoreImmOffset);
 		break;
 	case INSTRUCT_LOAD_STORE_REG_OFFSET:
-		LoadStoreRegOffset(fetchedInstruction);
+		LoadStoreRegOffset(this->instruction.pLoadStoreImmOffset);
 		break;
 	case INSTRUCT_LOAD_STORE_MULTIPLE:
 		//LoadStoreMultiple(fetchedInstruction);
 		break;
 	case INSTRUCT_BRANCH_BRANCHLINK:
-		Branch(fetchedInstruction);
+		Branch(this->instruction.pBranchInstruction);
 		break;
 	//case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:
 
@@ -577,9 +582,8 @@ bool Cpu::RemoveBreakpoint(int index) {
 	return breakpoint.Remove(index);
 }
 
-bool Cpu::IsConditionOK(uint32_t opcode) const {
-	sInstruction* instruction = reinterpret_cast<sInstruction*>(&opcode);
-	eCondition condition = static_cast<eCondition>(instruction->condition);
+bool Cpu::IsConditionOK() const {
+	eCondition condition = static_cast<eCondition>(this->instruction.pInstruction->condition);
 
 	switch (condition) {
 	case EQ:
@@ -670,15 +674,14 @@ bool Cpu::IsConditionOK(uint32_t opcode) const {
 	}
 }*/
 
-void Cpu::Branch(uint32_t opcode) {
-	if (!IsConditionOK(opcode)) return;
+void Cpu::Branch(sBranchInstruction* instruction) {
+	if (!IsConditionOK()) return;
 
 	int32_t signedOffset = Offset;
 	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
 	if ((signedOffset & 0x00800000) != 0) signedOffset += 0xFF000000;
 	uint32_t newPC = oldPC + 4 + signedOffset * 4;
 
-	sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&opcode);
 	if (instruction->L != 0) {
 		// Branch with Link
 		SetReg(REG_LR, oldPC);
@@ -770,8 +773,8 @@ bool Cpu::AluExecute(eALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t 
 	return updateRd;
 }
 
-void Cpu::DataProcImmShift(uint32_t opcode) {
-	if (!IsConditionOK(fetchedInstruction)) return;
+void Cpu::DataProcImmShift() {
+	if (!IsConditionOK()) return;
 
 	if (Rn == REG_PC) Rn_value += 4;
 	if (Rm == REG_PC) Rm_value += 4;
@@ -783,15 +786,15 @@ void Cpu::DataProcImmShift(uint32_t opcode) {
 	}
 }
 
-void Cpu::DataProcRegShift(uint32_t opcode) {
+void Cpu::DataProcRegShift() {
 	ShiftAmount = Rs_value & 0xFF;
 	if (Rm == REG_PC) Rm_value += 4;
 
-	DataProcImmShift(opcode);
+	DataProcImmShift();
 }
 
-void Cpu::DataProcImm(uint32_t opcode) {
-	if (!IsConditionOK(fetchedInstruction)) return;
+void Cpu::DataProcImm() {
+	if (!IsConditionOK()) return;
 
 	if (Rn == REG_PC) Rn_value += 4;
 
@@ -843,8 +846,7 @@ uint32_t Cpu::AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool s
 	}
 }
 
-void Cpu::LoadStoreImmOffset(uint32_t opcode) {
-	sLoadStoreImmOffset* instruction = reinterpret_cast<sLoadStoreImmOffset*>(&opcode);
+void Cpu::LoadStoreImmOffset(sLoadStoreImmOffset* instruction) {
 	bool P_preindexed = instruction->P;
 	bool U_add = instruction->U;
 	bool B_byte = instruction->B;
@@ -903,11 +905,9 @@ void Cpu::LoadStoreImmOffset(uint32_t opcode) {
 	}
 }
 
-void Cpu::LoadStoreRegOffset(uint32_t opcode) {
-	sLoadStoreRegOffset* instruction = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
-
+void Cpu::LoadStoreRegOffset(sLoadStoreImmOffset* instruction) {
 	if (Rm == REG_PC) throw EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE;
 	Immediate = AluBitShift(Shift, Rm_value, ShiftAmount, false);
 
-	LoadStoreImmOffset(opcode);
+	LoadStoreImmOffset(instruction);
 }
