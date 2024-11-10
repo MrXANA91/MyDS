@@ -81,7 +81,7 @@ std::string Cpu::eInstructCodeToString(eInstructCode instruct, std::string &othe
 	case INSTRUCT_DATA_PROC_IMM:
 		othertext = " - " + eALUOpCodeToString(aluOpcode);
 		return "INSTRUCT_DATA_PROC_IMM";
-	case INSTRUCT_MOVE_IMM_STATUS_REG:
+	case INSTRUCT_MOVE_IMM_TO_STATUS_REG:
 		return "INSTRUCT_MOVE_IMM_STATUS_REG";
 	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
 		return "INSTRUCT_LOAD_STORE_IMM_OFFSET";
@@ -409,7 +409,7 @@ void Cpu::Decode() {
 				Rotate = this->instruction.pMoveImmToStatusReg->rotate;
 				Immediate = this->instruction.pMoveImmToStatusReg->immediate;
 
-				this->instruction.SetDecode(INSTRUCT_MOVE_IMM_STATUS_REG);
+				this->instruction.SetDecode(INSTRUCT_MOVE_IMM_TO_STATUS_REG);
 				break;
 			}
 
@@ -497,6 +497,7 @@ void Cpu::Execute() {
 	case INSTRUCT_NULL:
 
 		break;
+		// ======== Basic ========
 	case INSTRUCT_DATA_PROC_IMM_SHIFT:
 		DataProcImmShift();
 		break;
@@ -506,9 +507,6 @@ void Cpu::Execute() {
 	case INSTRUCT_DATA_PROC_IMM:
 		DataProcImm();
 		break;
-	//case INSTRUCT_MOVE_IMM_STATUS_REG:
-
-		//break;
 	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
 		LoadStoreImmOffset(this->instruction.pLoadStoreImmOffset);
 		break;
@@ -522,16 +520,144 @@ void Cpu::Execute() {
 		Branch(this->instruction.pBranchInstruction);
 		break;
 	//case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:
-
+	//	CoprocLoadStore_DoubleRegTransf(this->instruction.pCoprocLoadStore_DoubleRegTransf);
 	//	break;
 	//case INSTRUCT_COPROC_DATA_PROC:
-
+	//	CoprocDataProc(this->instruction.pCoprocDataProc);
 	//	break;
 	//case INSTRUCT_COPROC_REG_TRANSF:
-
+	//	CoprocRegTransf(this->instruction.pCoprocRegTransf);
 	//	break;
 	//case INSTRUCT_SOFTWARE_INTERRUPT:
-
+	//	SoftwareInterrupt(this->instruction.pSoftwareInterrupt);
+	//	break;
+		// ======== Misc ========
+	//case INSTRUCT_MOVE_STATUS_REG_TO_REG:
+	//	MoveStatusRegToReg(this->instruction.pMoveStatusRegToReg);
+	//	break;
+	//case INSTRUCT_MOVE_REG_TO_STATUS_REG:
+	//	MoveRegToStatusReg(this->instruction.pMoveRegToStatusReg);
+	//	break;
+	//case INSTRUCT_MOVE_IMM_TO_STATUS_REG:
+	//	MoveImmToStatusReg(this->instruction.pMoveImmToStatusReg);
+	//	break;
+	//case INSTRUCT_BRANCH_EXCHANGE_THUMB:
+	//	BranchExchangeThumb(this->instruction.pBranchExchangeThumb);
+	//	break;
+	//case INSTRUCT_BRANCH_EXCHANGE_JAVA:
+	//	BranchExchangeJava(this->instruction.pBranchExchangeJava);
+	//	break;
+	//case INSTRUCT_COUNT_LEADING_ZEROS:
+	//	CountLeadingZeros(this->instruction.pCountLeadingZeros);
+	//	break;
+	//case INSTRUCT_BRANCH_LINK_EXCHANGE_THUMB:
+	//	BranchLinkExchangeThumb(this->instruction.pBranchLinkExchangeThumb);
+	//	break;
+	//case INSTRUCT_SATURATING_ADD_SUB:
+	//	SaturatingAddSub(this->instruction.pSaturatingAddSub);
+	//	break;
+	//case INSTRUCT_SOFTWARE_BREAKPOINT:
+	//	SoftwareBreakpoint(this->instruction.pSoftwareBreakpoint);
+	//	break;
+	//case INSTRUCT_SIGNED_MULTIPLIES:
+	//	SignedMultiplies(this->instruction.pSignedMultiplies);
+	//	break;
+		// ======== Multiply ========
+	//case INSTRUCT_MULTIPLY:
+	//	MultiplyInstruction(this->instruction.pMultiplyInstruction);
+	//	break;
+	//case INSTRUCT_UNSIGNED_MULTIPLY_LONG:
+	//	UnsignedMultiplyLong(this->instruction.pUnsignedMultiplyLong);
+	//	break;
+	//case INSTRUCT_MULTIPLY_LONG:
+	//	MultiplyLongInstruction(this->instruction.pMultiplyLongInstruction);
+	//	break;
+		// ======== Extra Load/Store ========
+	//case INSTRUCT_SWAP:
+	//	SwapInstruction(this->instruction.pSwapInstruction);
+	//	break;
+	//case INSTRUCT_LOAD_STORE_REG_EXCLUSIVE:
+	//	LoadStoreRegExclusive(this->instruction.pLoadStoreRegExclusive);
+	//	break;
+	//case INSTRUCT_LOAD_STORE_HALFWORD_REG_OFFSET:
+	//	LoadStoreHalfwordRegOffset(this->instruction.pLoadStoreHalfwordRegOffset);
+	//	break;
+	//case INSTRUCT_LOAD_STORE_HALFWORD_IMM_OFFSET:
+	//	LoadStoreHalfwordImmOffset(this->instruction.pLoadStoreHalfwordImmOffset);
+	//	break;
+	//case INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_IMM_OFFSET:
+	//	LoadSignedHalfwordByteImmOffset(this->instruction.pLoadSignedHalfwordByteImmOffset);
+	//	break;
+	//case INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_REG_OFFSET:
+	//	LoadSignedHalfwordByteRegOffset(this->instruction.pLoadSignedHalfwordByteRegOffset);
+	//	break;
+	//case INSTRUCT_LOAD_STORE_DOUBLEWORD_REG_OFFSET:
+	//	LoadStoreDoublewordRegOffset(this->instruction.pLoadStoreDoublewordRegOffset);
+	//	break;
+	//case INSTRUCT_LOAD_STORE_DOUBLEWORD_IMM_OFFSET:
+	//	LoadStoreDoublewordImmOffset(this->instruction.pLoadStoreDoublewordImmOffset);
+	//	break;
+		// ======== Media ========
+	//case INSTRUCT_PARALLEL_ADD_SUB:
+	//	ParallelAddSub(this->instruction.pParallelAddSub);
+	//	break;
+	//case INSTRUCT_HALFWORD_PACK:
+	//	HalfwordPack(this->instruction.pHalfwordPack);
+	//	break;
+	//case INSTRUCT_WORD_SATURATE:
+	//	WordSaturate(this->instruction.pWordSaturate);
+	//	break;
+	//case INSTRUCT_PARALLEL_HALFWORD_SATURATE:
+	//	ParallelHalfwordSaturate(this->instruction.pParallelHalfwordSaturate);
+	//	break;
+	//case INSTRUCT_BYTE_REVERSE_WORD:
+	//	ByteReverseWord(this->instruction.pByteReverseWord);
+	//	break;
+	//case INSTRUCT_BYTE_REVERSE_PACKED_HALFWORD:
+	//	ByteReversePackedHalfword(this->instruction.pByteReversePackedHalfword);
+	//	break;
+	//case INSTRUCT_BYTE_REVERSE_SIGNED_HALFWORD:
+	//	ByteReverseSignedHalfword(this->instruction.pByteReverseSignedHalfword);
+	//	break;
+	//case INSTRUCT_SELECT_BYTES:
+	//	SelectBytes(this->instruction.pSelectBytes);
+	//	break;
+	//case INSTRUCT_SIGN_ZERO_EXTEND:
+	//	SignZeroExtend(this->instruction.pSignZeroExtend);
+	//	break;
+	//case INSTRUCT_MULTIPLIES_TYPE3:
+	//	Multiplies_Type3(this->instruction.pMultiplies_Type3);
+	//	break;
+	//case INSTRUCT_UNSIGNED_SUM_OF_DIFFS:
+	//	UnsignedSumOfDifferences(this->instruction.pUnsignedSumOfDifferences);
+	//	break;
+	//case INSTRUCT_UNSIGNED_SUM_OF_DIFFS_ACC:
+	//	UnsignedSumOfDifferencesAcc(this->instruction.pUnsignedSumOfDifferencesAcc);
+	//	break;
+	//case INSTRUCT_UNDEFINED:
+	//	UndefinedInstruction(this->instruction.pUndefinedInstruction);
+	//	break;
+		// ======== Unconditional ========
+	//case INSTRUCT_CHANGE_PROCESSOR_STATE:
+	//	ChangeProcessorState(this->instruction.pChangeProcessorState);
+	//	break;
+	//case INSTRUCT_SET_ENDIANNESS:
+	//	SetEndianness(this->instruction.pSetEndianness);
+	//	break;
+	//case INSTRUCT_CACHE_PRELOAD:
+	//	CachePreload(this->instruction.pCachePreload);
+	//	break;
+	//case INSTRUCT_SAVE_RETURN_STATE:
+	//	SaveReturnState(this->instruction.pSaveReturnState);
+	//	break;
+	//case INSTRUCT_RETURN_FROM_EXCEPTION:
+	//	ReturnFromException(this->instruction.pReturnFromException);
+	//	break;
+	//case INSTRUCT_BRANCH_LINK_CHANGE_TO_THUMB:
+	//	BranchLinkChangeToThumb(this->instruction.pBranchLinkChangeToThumb);
+	//	break;
+	//case INSTRUCT_ADDITIONAL_COPROC_DOUBLEREG_TRANSF:
+	//	AdditionalCoprocessorDoubleRegTransf(this->instruction.pAdditionalCoprocessorDoubleRegTransf);
 	//	break;
 	}
 }

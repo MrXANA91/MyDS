@@ -132,37 +132,75 @@ private:
 
 	bool IsConditionOK() const;
 
-	// Branch
-	void Branch(sBranchInstruction* instruction);
-
-	// Data processing
+	// ========== INSTRUCTIONS ==========
+	// Basics
 	void DataProcImmShift();
 	void DataProcRegShift();
 	void DataProcImm();
-	bool AluExecute(eALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
-	uint32_t AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
-
-	// Multiply
-
-	// Misc arithmetic (CLZ)
-
-	// Status register access
-	void MoveImmToStatusReg(sMoveImmToStatusReg* instruction);
-
-	// Load and store
 	void LoadStoreImmOffset(sLoadStoreImmOffset* instruction);
 	void LoadStoreRegOffset(sLoadStoreImmOffset* instruction);
 	void LoadStoreMultiple(sLoadStoreMultiple* instruction);
-
-	// Semaphore
-
-	// Exeption-generating
-	void SoftwareInterrupt(sSoftwareInterrupt* instruction);
-
-	// Coprocessor
+	void Branch(sBranchInstruction* instruction);
 	void CoprocLoadStore_DoubleRegTransf(sCoprocLoadStore_DoubleRegTransf* instruction);
 	void CoprocDataProc(sCoprocDataProc* instruction);
 	void CoprocRegTransf(sCoprocRegTransf* instruction);
+	void SoftwareInterrupt(sSoftwareInterrupt* instruction);
+	
+	// Misc
+	void MoveStatusRegToReg(sMoveStatusRegToReg* instruction);
+	void MoveRegToStatusReg(sMoveRegToStatusReg* instruction);
+	void MoveImmToStatusReg(sMoveImmToStatusReg* instruction);
+	void BranchExchangeThumb(sBranchExchangeThumb* instruction);
+	void BranchExchangeJava(sBranchExchangeJava* instruction);
+	void CountLeadingZeros(sCountLeadingZeros* instruction);
+	void BranchLinkExchangeThumb(sBranchLinkExchangeThumb* instruction);
+	void SaturatingAddSub(sSaturatingAddSub* instruction);
+	void SoftwareBreakpoint(sSoftwareBreakpoint* instruction);
+	void SignedMultiplies(sSignedMultiplies* instruction);
+	
+	// Multiply
+	void MultiplyInstruction(sMultiplyInstruction* instruction);
+	void UnsignedMultiplyLong(sUnsignedMultiplyLong* instruction);
+	void MultiplyLongInstruction(sMultiplyLongInstruction* instruction);
+	
+	// Extra Load/Store
+	void SwapInstruction(sSwapInstruction* instruction);
+	void LoadStoreRegExclusive(sLoadStoreRegExclusive* instruction);
+	void LoadStoreHalfwordRegOffset(sLoadStoreHalfwordRegOffset* instruction);
+	void LoadStoreHalfwordImmOffset(sLoadStoreHalfwordImmOffset* instruction);
+	void LoadSignedHalfwordByteImmOffset(sLoadSignedHalfwordByteImmOffset* instruction);
+	void LoadSignedHalfwordByteRegOffset(sLoadSignedHalfwordByteRegOffset* instruction);
+	void LoadStoreDoublewordRegOffset(sLoadStoreDoublewordRegOffset* instruction);
+	void LoadStoreDoublewordImmOffset(sLoadStoreDoublewordImmOffset* instruction);
+	
+	// Media
+	void ParallelAddSub(sParallelAddSub* instruction);
+	void HalfwordPack(sHalfwordPack* instruction);
+	void WordSaturate(sWordSaturate* instruction);
+	void ParallelHalfwordSaturate(sParallelHalfwordSaturate* instruction);
+	void ByteReverseWord(sByteReverseWord* instruction);
+	void ByteReversePackedHalfword(sByteReversePackedHalfword* instruction);
+	void ByteReverseSignedHalfword(sByteReverseSignedHalfword* instruction);
+	void SelectBytes(sSelectBytes* instruction);
+	void SignZeroExtend(sSignZeroExtend* instruction);
+	void Multiplies_Type3(sMultiplies_Type3* instruction);
+	void UnsignedSumOfDifferences(sUnsignedSumOfDifferences* instruction);
+	void UnsignedSumOfDifferencesAcc(sUnsignedSumOfDifferencesAcc* instruction);
+	void UndefinedInstruction(sUndefinedInstruction* instruction);
+	
+	// Unconditional
+	void ChangeProcessorState(sChangeProcessorState* instruction);
+	void SetEndianness(sSetEndianness* instruction);
+	void CachePreload(sCachePreload* instruction);
+	void SaveReturnState(sSaveReturnState* instruction);
+	void ReturnFromException(sReturnFromException* instruction);
+	void BranchLinkChangeToThumb(sBranchLinkChangeToThumb* instruction);
+	void AdditionalCoprocessorDoubleRegTransf(sAdditionalCoprocessorDoubleRegTransf* instruction);
+	
+	// ==================================
+
+	bool AluExecute(eALUOpCode alu_opcode, uint32_t& Rd, uint32_t Rn, uint32_t op2, bool setFlags);
+	uint32_t AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force = false);
 
 public:
 	bool Debug{ false };

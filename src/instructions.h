@@ -53,10 +53,10 @@ enum eShiftType : uint8_t {
 
 enum eInstructCode : int {
 	INSTRUCT_NULL,
+	// Basic
 	INSTRUCT_DATA_PROC_IMM_SHIFT,
 	INSTRUCT_DATA_PROC_REG_SHIFT,
 	INSTRUCT_DATA_PROC_IMM,
-	INSTRUCT_MOVE_IMM_STATUS_REG,
 	INSTRUCT_LOAD_STORE_IMM_OFFSET,
 	INSTRUCT_LOAD_STORE_REG_OFFSET,
 	INSTRUCT_LOAD_STORE_MULTIPLE,
@@ -64,7 +64,53 @@ enum eInstructCode : int {
 	INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF,
 	INSTRUCT_COPROC_DATA_PROC,
 	INSTRUCT_COPROC_REG_TRANSF,
-	INSTRUCT_SOFTWARE_INTERRUPT
+	INSTRUCT_SOFTWARE_INTERRUPT,
+	// Misc
+	INSTRUCT_MOVE_STATUS_REG_TO_REG,
+	INSTRUCT_MOVE_REG_TO_STATUS_REG,
+	INSTRUCT_MOVE_IMM_TO_STATUS_REG,
+	INSTRUCT_BRANCH_EXCHANGE_THUMB,
+	INSTRUCT_BRANCH_EXCHANGE_JAVA,
+	INSTRUCT_COUNT_LEADING_ZEROS,
+	INSTRUCT_BRANCH_LINK_EXCHANGE_THUMB,
+	INSTRUCT_SATURATING_ADD_SUB,
+	INSTRUCT_SOFTWARE_BREAKPOINT,
+	INSTRUCT_SIGNED_MULTIPLIES,
+	// Multiply
+	INSTRUCT_MULTIPLY,
+	INSTRUCT_UNSIGNED_MULTIPLY_LONG,
+	INSTRUCT_MULTIPLY_LONG,
+	// Extra Load/Store
+	INSTRUCT_SWAP,
+	INSTRUCT_LOAD_STORE_REG_EXCLUSIVE,
+	INSTRUCT_LOAD_STORE_HALFWORD_REG_OFFSET,
+	INSTRUCT_LOAD_STORE_HALFWORD_IMM_OFFSET,
+	INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_IMM_OFFSET,
+	INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_REG_OFFSET,
+	INSTRUCT_LOAD_STORE_DOUBLEWORD_REG_OFFSET,
+	INSTRUCT_LOAD_STORE_DOUBLEWORD_IMM_OFFSET,
+	// Media
+	INSTRUCT_PARALLEL_ADD_SUB,
+	INSTRUCT_HALFWORD_PACK,
+	INSTRUCT_WORD_SATURATE,
+	INSTRUCT_PARALLEL_HALFWORD_SATURATE,
+	INSTRUCT_BYTE_REVERSE_WORD,
+	INSTRUCT_BYTE_REVERSE_PACKED_HALFWORD,
+	INSTRUCT_BYTE_REVERSE_SIGNED_HALFWORD,
+	INSTRUCT_SELECT_BYTES,
+	INSTRUCT_SIGN_ZERO_EXTEND,
+	INSTRUCT_MULTIPLIES_TYPE3,
+	INSTRUCT_UNSIGNED_SUM_OF_DIFFS,
+	INSTRUCT_UNSIGNED_SUM_OF_DIFFS_ACC,
+	INSTRUCT_UNDEFINED,
+	// Unconditional
+	INSTRUCT_CHANGE_PROCESSOR_STATE,
+	INSTRUCT_SET_ENDIANNESS,
+	INSTRUCT_CACHE_PRELOAD,
+	INSTRUCT_SAVE_RETURN_STATE,
+	INSTRUCT_RETURN_FROM_EXCEPTION,
+	INSTRUCT_BRANCH_LINK_CHANGE_TO_THUMB,
+	INSTRUCT_ADDITIONAL_COPROC_DOUBLEREG_TRANSF,
 };
 
 union sInstruction {
@@ -901,39 +947,86 @@ public:
 	void SetDecode(eInstructCode instruct);
 	const eInstructCode GetDecode() const;
 
-	// Decoders
-
-	bool IsUnconditional() const;
-	bool IsConditionReserved() const;
-
+	// ======== Instruction Decoders ========
+	// Basic
 	bool IsDataProcImmShift() const;
-	bool IsMiscellaneous() const;
-
 	bool IsDataProcRegShift() const;
-	bool IsMultipliesOrExtraLoadStore() const;
-
 	bool IsDataProcImm() const;
-	bool IsUndefined() const;
-
-	bool IsMoveImmToStatusReg() const;
-
 	bool IsLoadStoreImmOffset() const;
-
-	bool IsLoadStoreRegOffset() const;
-	bool IsMedia() const;
-	bool IsArchUndefined() const;
-
 	bool IsLoadStoreMultiple() const;
-
+	bool IsLoadStoreRegOffset() const;
 	bool IsBranch() const;
-
 	bool IsCoprocLoadStore_DoubleRegTransf() const;
-
 	bool IsCoprocDataProc() const;
-
 	bool IsCoprocRegTransf() const;
-
 	bool IsSoftwareInterrupt() const;
 
+	// Misc
+	bool IsMiscellaneous() const;
+
+	bool IsMoveStatusRegToReg() const;
+	bool IsMoveRegToStatusReg() const;
+	bool IsMoveImmToStatusReg() const;
+	bool IsBranchExchangeThumb() const;
+	bool IsBranchExchangeJava() const;
+	bool IsCountLeadingZeros() const;
+	bool IsBranchLinkExchangeThumb() const;
+	bool IsSaturatingAddSub() const;
+	bool IsSoftwareBreakpoint() const;
+	bool IsSignedMultiplies() const;
+
+	// Multiply
+	bool IsMultipliesOrExtraLoadStore() const;
+
+	bool IsMultiplyInstruction() const;
+	bool IsUnsignedMultiplyLong() const;
+	bool IsMultiplyLongInstruction() const;
+
+	// Extra Load/Store
+	bool IsSwapInstruction() const;
+	bool IsLoadStoreRegExclusive() const;
+	bool IsLoadStoreHalfwordRegOffset() const;
+	bool IsLoadStoreHalfwordImmOffset() const;
+	bool IsLoadSignedHalfwordByteImmOffset() const;
+	bool IsLoadSignedHalfwordByteRegOffset() const;
+	bool IsLoadStoreDoublewordRegOffset() const;
+	bool IsLoadStoreDoublewordImmOffset() const;
+
+	// Media
+	bool IsMedia() const;
+
+	bool IsParallelAddSub() const;
+	bool IsHalfwordPack() const;
+	bool IsWordSaturate() const;
+	bool IsParallelHalfwordSaturate() const;
+	bool IsByteReverseWord() const;
+	bool IsByteReversePackedHalfword() const;
+	bool IsByteReverseSignedHalfword() const;
+	bool IsSelectBytes() const;
+	bool IsSignZeroExtend() const;
+	bool IsMultiplies_Type3() const;
+	bool IsUnsignedSumOfDifferences() const;
+	bool IsUnsignedSumOfDifferencesAcc() const;
+	bool IsUndefined() const;
+
+	bool IsArchUndefined() const;
+
+	// Unconditional
+	bool IsUnconditional() const;
+
+	bool IsChangeProcessorState() const;
+	bool IsSetEndianness() const;
+	bool IsCachePreload() const;
+	bool IsSaveReturnState() const;
+	bool IsReturnFromException() const;
+	bool IsBranchLinkChangeToThumb() const;
+	bool IsAdditionalCoprocessorDoubleRegTransf() const;
+
+	// Others
+	bool IsConditionReserved() const;
+
+	// ======================================
+
+	// Assembly string display
 	std::string ToString() const;
 };
