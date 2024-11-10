@@ -3,7 +3,7 @@
 #include <cstdint>
 #include "arm_mem.h"
 
-class ARM7_mem {
+class ARM7_mem : public ARM_mem {
 private:
 	uint8_t* bios; // 00000000h to 00003FFFh
 

@@ -10,7 +10,7 @@ static bool LoadARM9BIOS(ARM9_mem& mem, std::string biospath);
 static Cpu* arm9 = new Cpu(ARMv5_ARM9);
 static Cpu* arm7 = new Cpu(ARMv4_ARM7);
 static ARM9_mem mem9;
-static ARM9_mem mem7;
+static ARM7_mem mem7;
 
 static uint64_t execInstr{ 0 };
 static std::chrono::steady_clock::time_point start;
@@ -42,15 +42,17 @@ int main()
 	std::cout << "=============================" << "\n";
 	std::cout << "\n";
 
-	std::cout << "CPU : arm9\n";
 	arm9->SetMMU(&mem9);
 	InitArm9Memory(mem9);
+	arm7->SetMMU(&mem7);
+	//InitArm7Memory(mem7);
 
 	NDSRom nds("..\\NDS-Files\\TinyFB.nds");
 	if (nds.IsOpened()) {
 		std::cout << "TinyFB.nds successfully opened :\n";
 		nds.WriteProgramToARM9Memory(mem9);
 		std::cout << "\t- ARM9 Start address : 0x" << std::hex << nds.GetARM9StartAddress() << std::dec << "\n";
+		//nds.WriteProgramToARM7Memory(mem7);
 		std::cout << "\t- ARM7 Start address : 0x" << std::hex << nds.GetARM7StartAddress() << std::dec << "\n";
 	}
 	else {
@@ -64,17 +66,28 @@ int main()
 		std::cout << "Could not load ARM9 bios file\n";
 	}
 
-	arm9->SetBootAddr(mem9.BIOS_ADDR);
-	std::cout << "Boot address set to : 0x" << std::hex << mem9.BIOS_ADDR << std::dec << "\n";
-	std::cout << "Emulator setup finished.\n> ";
+	/*if (LoadARM7BIOS(mem7, "..\\NDS-Files\\Bios\\biosnds7.rom")) {
+		std::cout << "ARM7 bios successfully loaded\n";
+	}
+	else {
+		std::cout << "Could not load ARM7 bios file\n";
+	}*/
 
-	Cpu* currentCpu = arm9;
+	arm9->SetBootAddr(mem9.BIOS_ADDR);
+	std::cout << "ARM9 boot address set to : 0x" << std::hex << mem9.BIOS_ADDR << std::dec << "\n";
+	//arm7->SetBootAddr(mem7.BIOS_ADDR);
+	//std::cout << "ARM7 boot address set to : 0x" << std::hex << mem7.BIOS_ADDR << std::dec << "\n";
+
+	std::cout << "Selected CPU : ARM9\n";
+	Cpu* selectedCpu = arm9;
+
+	std::cout << "Emulator setup finished.\n> ";
 
 	char command[50];
 
 	uint32_t addr{ 0 };
 	int bpIndex{ 0 };
-	pc = currentCpu->GetReg(REG_PC);
+	pc = selectedCpu->GetReg(REG_PC);
 
 
 	bool programRunning = true;
@@ -83,7 +96,7 @@ int main()
 
 		switch (command[0]) {
 		case 's':
-			currentCpu->DebugStep();
+			selectedCpu->DebugStep();
 			break;
 		case 'm':
 			std::cout << "Enter mem address as hex address to read : 0x";
@@ -91,11 +104,11 @@ int main()
 			std::cout << "Word = 0x" << std::hex << mem9.GetWordAtPointer(mem9.GetPointerFromAddr(addr)) << "\n";
 			break;
 		case 'd':
-			currentCpu->DisplayRegisters();
+			selectedCpu->DisplayRegisters();
 			break;
 		case 'b':
 			if (command[1] == '\n' || command[1] == '\0' || command[1] == 'd') {
-				currentCpu->DisplayBreakpoints();
+				selectedCpu->DisplayBreakpoints();
 				if (command[1] == 'd') break;
 				std::cout << "n: new breakpoint / t: toggle breakpoint / r: remove breakpoint\nBREAKPOINT > ";
 				std::cin >> command;
@@ -107,7 +120,7 @@ int main()
 			case 'n':
 				std::cout << "Enter program address to stop execution : 0x";
 				std::cin >> std::hex >> bpAddr >> std::dec;
-				if (currentCpu->SetBreakpoint(bpAddr)) {
+				if (selectedCpu->SetBreakpoint(bpAddr)) {
 					std::cout << "Program will stop at address 0x" << std::hex << bpAddr << std::dec << "\n";
 				}
 				else {
@@ -117,7 +130,7 @@ int main()
 			case 't':
 				std::cout << "Enter breakpoint id to toggle : ";
 				std::cin >> bpIndex;
-				if (currentCpu->ToggleBreakpoint(bpIndex)) {
+				if (selectedCpu->ToggleBreakpoint(bpIndex)) {
 					std::cout << "Successfully toggled breakpoint " << bpIndex << "\n";
 				}
 				else {
@@ -127,7 +140,7 @@ int main()
 			case 'r':
 				std::cout << "Enter breakpoint id to remove : ";
 				std::cin >> bpIndex;
-				if (currentCpu->RemoveBreakpoint(bpIndex)) {
+				if (selectedCpu->RemoveBreakpoint(bpIndex)) {
 					std::cout << "Successfully removed breakpoint " << bpIndex << "\n";
 				}
 				else {
@@ -139,38 +152,49 @@ int main()
 			}
 			break;
 		case 'e':
-			if (currentCpu->IsRunning()) {
-				currentCpu->Stop();
+			if (selectedCpu->IsRunning()) {
+				selectedCpu->Stop();
 				std::cout << "CPU stopped.\n";
 			}
 			else {
-				currentCpu->Run();
+				selectedCpu->Run();
 				std::cout << "CPU running...\n";
 			}
 			break;
-		case 'h':
-			std::cout << "r: reset CPU / s: single step\n";
-			std::cout << "e: continuous execution (until breakpoint) / b: breakpoint sub console (bd to only display breakpoints)\n";
-			std::cout << "m: print a memory address / d: display registers\n";
-			std::cout << "q: exit program\n";
-			break;
 		case 'r':
 			if (command[1] != 'a') {
-				currentCpu->Reset();
-				pc = currentCpu->GetReg(REG_PC);
+				selectedCpu->Reset();
+				pc = selectedCpu->GetReg(REG_PC);
 				std::cout << "PC : 0x" << std::hex << pc << std::dec << "\n";
 				std::cout << "CPU has been reset.\n";
 			}
 			else {
 				std::cout << "Enter new boot address as hex address : 0x";
 				std::cin >> std::hex >> addr >> std::dec;
-				if (currentCpu->SetBootAddr(addr)) {
+				if (selectedCpu->SetBootAddr(addr)) {
 					std::cout << "New boot address set" << "\n";
 				}
 				else {
 					std::cout << "Could not set boot address" << "\n";
 				}
 			}
+			break;
+		case 'c':
+			if (selectedCpu == arm9) {
+				selectedCpu = arm7;
+				std::cout << "Selected CPU : ARM7\n";
+			}
+			else {
+				selectedCpu = arm9;
+				std::cout << "Selected CPU : ARM9\n";
+			}
+			break;
+		case 'h':
+			std::cout << "c: switch current selected CPU\n";
+			std::cout << "r: reset CPU (ra: change boot address) / s: single step\n";
+			std::cout << "e: continuous execution (until breakpoint) / b: breakpoint sub console (bd to only display breakpoints)\n";
+			std::cout << "m: print a memory address / d: display registers\n";
+			std::cout << "q: exit program\n";
 			break;
 		case 'q':
 			std::cout << "Exiting program.\n";

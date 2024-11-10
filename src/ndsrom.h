@@ -103,7 +103,7 @@ public:
 	/// Write ARM7 program into virtual ARM memory
 	/// </summary>
 	/// <param name="mem">Reference to ARM7 virtual memory</param>
-	void SetARM7ProgramMemory(ARM_mem& mem);
+	void WriteProgramToARM7Memory(ARM_mem& mem);
 
 	/// <summary>
 	/// Get ARM7 entry address in virtual ARM memory

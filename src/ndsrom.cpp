@@ -43,7 +43,7 @@ uint32_t NDSRom::GetARM9StartAddress() {
 	return header.ARM9_EntryAddress;
 }
 
-void NDSRom::SetARM7ProgramMemory(ARM_mem& mem) {
+void NDSRom::WriteProgramToARM7Memory(ARM_mem& mem) {
 	uint8_t* ptr = mem.GetPointerFromAddr(header.ARM7_EntryAddress);
 
 	file.seekg(header.ARM7_ROMOffset, std::ios::beg);
