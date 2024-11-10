@@ -129,19 +129,21 @@ CpuMode Cpu::GetCurrentCpuMode() const {
 	return (CpuMode)cpsr.bits.Mode;
 }
 
-uint32_t Cpu::GetReg(int regID) {
+uint32_t Cpu::GetReg(int regID, CpuMode forceCpuModeAccess) const {
+	if (forceCpuModeAccess == Current) forceCpuModeAccess = GetCurrentCpuMode();
+
 	if ((regID < 0) || (regID > 15)) throw EXCEPTION_REG_ACCESS_OUT_OF_RANGE;
 
 	if ((regID < 8 || regID == 15)) return reg[regID];
 	// Here, regID is from 8 to 14
 
-	if (GetCurrentCpuMode() == FIQ) return reg_fiq[regID - 8];
+	if (forceCpuModeAccess == FIQ) return reg_fiq[regID - 8];
 	// Here, we are not in FIQ mode
 
 	if ((regID != 13) && (regID != 14)) return reg[regID];
 	// Here, we want to access either SP or LR
 
-	switch (GetCurrentCpuMode()) {
+	switch (forceCpuModeAccess) {
 	case System:
 	case User:
 		return reg[regID];
@@ -160,7 +162,9 @@ uint32_t Cpu::GetReg(int regID) {
 	}
 }
 
-void Cpu::SetReg(int regID, uint32_t value) {
+void Cpu::SetReg(int regID, uint32_t value, CpuMode forceCpuModeAccess) {
+	if (forceCpuModeAccess == Current) forceCpuModeAccess = GetCurrentCpuMode();
+
 	if (regID == 15) {
 		SetPCReg(value);
 		return;
@@ -175,7 +179,7 @@ void Cpu::SetReg(int regID, uint32_t value) {
 	}
 	// Here, regID is from 8 to 14
 
-	if (GetCurrentCpuMode() == FIQ) {
+	if (forceCpuModeAccess == FIQ) {
 		reg_fiq[regID - 8] = value;
 		if (Debug) std::cout << "R" << regID << "(FIQ) := " << value << "(0x" << std::hex << value << std::dec << ")\n";
 		return;
@@ -189,7 +193,7 @@ void Cpu::SetReg(int regID, uint32_t value) {
 	}
 	// Here, we want to access either SP or LR
 
-	switch (GetCurrentCpuMode()) {
+	switch (forceCpuModeAccess) {
 	case System:
 	case User:
 		reg[regID] = value;
@@ -515,7 +519,7 @@ void Cpu::Execute() {
 		LoadStoreRegOffset(this->instruction.pLoadStoreImmOffset);
 		break;
 	case INSTRUCT_LOAD_STORE_MULTIPLE:
-		//LoadStoreMultiple(fetchedInstruction);
+		LoadStoreMultiple(this->instruction.pLoadStoreMultiple);
 		break;
 	case INSTRUCT_BRANCH_BRANCHLINK:
 		Branch(this->instruction.pBranchInstruction);
@@ -623,72 +627,6 @@ bool Cpu::IsConditionOK() const {
 	}
 }
 
-/*void Cpu::EXE_Branch(uint32_t opcode) {
-	sBranchInstruction* instruction = reinterpret_cast<sBranchInstruction*>(&opcode);
-
-	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
-	if (IsBranch_B_BL(instruction->opcode)) {
-		int32_t offset = static_cast<int32_t>(instruction->nn);
-		if ((offset & 0x00800000) != 0) offset += 0xFF000000;
-		uint32_t newPC = oldPC + 4 + offset * 4;
-		if (IsConditionReserved(instruction->opcode)) {
-			// ARM9 ONLY : BLX_imm, branch with link and thumb
-			bool halfword_offset = instruction->b_opcode;
-			newPC += (halfword_offset ? 2 : 0);
-			SetReg(REG_PC, newPC);
-			SetReg(REG_LR, oldPC);
-			cpsr.bits.T = 1;
-			return;
-		}
-
-		if (!IsConditionOK(instruction->opcode)) return;
-
-		if (instruction->b_opcode != 0) {
-			// branch with link
-			SetReg(REG_LR, oldPC);
-		}
-		SetReg(REG_PC, newPC);
-	}
-	else if (IsBranch_BX_BLX(instruction->opcode)) {
-		
-		if (!IsConditionOK(instruction->opcode)) return;
-
-		uint8_t bx_opcode = instruction->thumbSwitch.bx_opcode;
-		int regID = instruction->thumbSwitch.Rn;
-		if ((bx_opcode == 0x1) || (bx_opcode == 0x2)) {
-			// BX (or Jazelle, but Jazelle not supported so behaving like BX)
-			uint32_t Rn = GetReg(regID);
-			SetReg(REG_PC, Rn);
-			cpsr.bits.T = Rn & 0x1;
-		}
-		else if (bx_opcode == 0x3) {
-			// BX with link
-			uint32_t Rn = GetReg(regID);
-			SetReg(REG_PC, Rn);
-			cpsr.bits.T = Rn & 0x1;
-			SetReg(REG_LR, oldPC);
-		}
-	}
-	else {
-		throw EXCEPTION_EXEC_BRANCH_DECODE_FAILURE;
-	}
-}*/
-
-void Cpu::Branch(sBranchInstruction* instruction) {
-	if (!IsConditionOK()) return;
-
-	int32_t signedOffset = Offset;
-	uint32_t oldPC = GetReg(REG_PC); // Here, REG_PC has already been incremented by 4
-	if ((signedOffset & 0x00800000) != 0) signedOffset += 0xFF000000;
-	uint32_t newPC = oldPC + 4 + signedOffset * 4;
-
-	if (instruction->L != 0) {
-		// Branch with Link
-		SetReg(REG_LR, oldPC);
-	}
-	SetReg(REG_PC, newPC);
-}
-
 bool Cpu::AluExecute(eALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t op2, bool setFlags) {
 	uint32_t result = 0;
 	bool updateRd = true;
@@ -773,41 +711,6 @@ bool Cpu::AluExecute(eALUOpCode alu_opcode, uint32_t &Rd, uint32_t Rn, uint32_t 
 	return updateRd;
 }
 
-void Cpu::DataProcImmShift() {
-	if (!IsConditionOK()) return;
-
-	if (Rn == REG_PC) Rn_value += 4;
-	if (Rm == REG_PC) Rm_value += 4;
-
-	Operand = AluBitShift(Shift, Rm_value, ShiftAmount, SetFlags);
-
-	if (AluExecute(aluOpcode, Rd_value, Rn, Operand, SetFlags)) {
-		SetReg(Rd, Rd_value);
-	}
-}
-
-void Cpu::DataProcRegShift() {
-	ShiftAmount = Rs_value & 0xFF;
-	if (Rm == REG_PC) Rm_value += 4;
-
-	DataProcImmShift();
-}
-
-void Cpu::DataProcImm() {
-	if (!IsConditionOK()) return;
-
-	if (Rn == REG_PC) Rn_value += 4;
-
-	Operand = AluBitShift(ROR, Immediate, Rotate * 2, SetFlags, true);
-
-	if (AluExecute(aluOpcode, Rd_value, Rn_value, Operand, SetFlags)) {
-		if ((Rd == REG_PC) && (SetFlags)) {
-			RestoreCPSR();
-		}
-		SetReg(Rd, Rd_value);
-	}
-}
-
 uint32_t Cpu::AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool setFlags, bool force) {
 	switch (type) {
 	default:
@@ -844,70 +747,4 @@ uint32_t Cpu::AluBitShift(eShiftType type, uint32_t base, uint32_t shift, bool s
 		uint32_t right = (base & preserveMask) << (32 - shift);
 		return (left) | (right);
 	}
-}
-
-void Cpu::LoadStoreImmOffset(sLoadStoreImmOffset* instruction) {
-	bool P_preindexed = instruction->P;
-	bool U_add = instruction->U;
-	bool B_byte = instruction->B;
-	bool W_writeBack = instruction->W;		// if P = 1
-	bool W_userMemAccess = instruction->W;	// if P = 0
-	bool L_load = instruction->L;
-
-	int size = B_byte ? 1 : 4;
-
-	// If Pre index
-	uint32_t operandAddr = Rn_value;
-	if (Rn == REG_PC) operandAddr += 4; // PC+8
-	if (P_preindexed) {
-		if (U_add) {
-			operandAddr += Immediate;
-		}
-		else {
-			operandAddr -= Immediate;
-		}
-		if (W_writeBack) SetReg(Rn, operandAddr);
-	}
-
-	if (!P_preindexed && W_userMemAccess) {
-		// TODO : Check if memory is User accessible
-	}
-	uint8_t* startPtr = memory->GetPointerFromAddr(operandAddr);
-	Operand = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(startPtr, size));
-
-	// If Post index
-	if (!P_preindexed) {
-		if (U_add) {
-			Operand += Immediate;
-		}
-		else {
-			Operand -= Immediate;
-		}
-		// WriteBack always enabled
-		ARM_mem::SetWordAtPointer(startPtr, Operand);
-	}
-
-	// Execute...
-	if (L_load) {	// ... load
-		// TODO : LDR PC, <op> sets CPSR.T <op> bit0 (LSB) for ARMv5
-
-		SetReg(Rd, B_byte ? static_cast<uint8_t>(Operand) : Operand);
-	}
-	else {			// ... store
-		if (Rd == REG_PC) Rd_value += 8; // PC+12
-
-		if (B_byte) {
-			*startPtr = static_cast<uint8_t>(Rd_value);
-		}
-		else {
-			ARM_mem::SetWordAtPointer(startPtr, Rd_value);
-		}
-	}
-}
-
-void Cpu::LoadStoreRegOffset(sLoadStoreImmOffset* instruction) {
-	if (Rm == REG_PC) throw EXCEPTION_EXEC_MEM_REG_PC_UNAUTHORIZE;
-	Immediate = AluBitShift(Shift, Rm_value, ShiftAmount, false);
-
-	LoadStoreImmOffset(instruction);
 }

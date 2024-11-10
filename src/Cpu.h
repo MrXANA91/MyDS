@@ -48,6 +48,7 @@ union CPSR {
 };
 
 enum CpuMode : uint16_t {
+	Current = 0x0,
 	User = 0x10,			// (non privileged)
 	FIQ = 0x11,				// Fast Interrupt
 	IRQ = 0x12,				// Normal Interrupt
@@ -113,7 +114,7 @@ private:
 		return cpsr.bits.T == 1;
 	}
 
-	void SetReg(int regID, uint32_t value);
+	void SetReg(int regID, uint32_t value, CpuMode forceCpuModeAccess = Current);
 	void SetPCReg(uint32_t value);
 
 	void SaveCPSR();
@@ -207,7 +208,7 @@ public:
 	/// </summary>
 	void DebugStep();
 
-	uint32_t GetReg(int regID);
+	uint32_t GetReg(int regID, CpuMode forceCpuModeAccess = Current) const;
 
 	std::string eConditionToString(eCondition cond);
 	std::string eALUOpCodeToString(eALUOpCode aluOpcode);

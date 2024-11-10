@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
 
 #pragma pack(push)
 #pragma pack(1)
@@ -74,6 +75,8 @@ union sInstruction {
 	uint32_t opcode;
 };
 
+#pragma region Basic instructions
+
 union sDataProcImmShift {
 	struct {
 		uint32_t Rm : 4;
@@ -126,22 +129,6 @@ union sDataProcImm {
 };
 
 static_assert(sizeof(sDataProcImm) == 4, "DataProcImm size is not 4");
-
-union sMoveImmToStatusReg {
-	struct {
-		uint32_t immediate : 8;
-		uint32_t rotate : 4;
-		uint32_t mustbe1111 : 4;
-		uint32_t Mask : 4;
-		uint32_t mustbe10 : 2;
-		uint32_t R : 1;
-		uint32_t mustbe00110 : 5;
-		uint32_t condition : 4;
-	};
-	uint32_t code;
-};
-
-static_assert(sizeof(sMoveImmToStatusReg) == 4, "MoveImmToStatusReg size is not 4");
 
 union sLoadStoreImmOffset {
 	struct {
@@ -204,7 +191,7 @@ union sBranchInstruction {
 		uint32_t offset : 24;
 		uint32_t L : 1;
 		uint32_t mustbe101 : 3;
-		uint32_t condition:4;
+		uint32_t condition : 4;
 	};
 	uint32_t code;
 };
@@ -276,6 +263,558 @@ union sSoftwareInterrupt {
 
 static_assert(sizeof(sSoftwareInterrupt) == 4, "SoftwareInterrupt size is not 4");
 
+#pragma endregion
+
+#pragma region Miscellaneous Instructions
+
+union sMoveStatusRegToReg {
+	struct {
+		uint32_t mustbe0 : 12;
+		uint32_t Rd : 4;
+		uint32_t mustbe1111 : 4;
+		uint32_t mustbe00 : 2;
+		uint32_t R : 1;
+		uint32_t mustbe00010 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMoveStatusRegToReg) == 4, "sMoveStatusRegToReg size is not 4");
+
+union sMoveRegToStatusReg {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe0 : 8;
+		uint32_t mustbe1111 : 4;
+		uint32_t Mask : 4;
+		uint32_t mustbe10 : 2;
+		uint32_t R : 1;
+		uint32_t mustbe00010 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMoveRegToStatusReg) == 4, "sMoveRegToStatusReg size is not 4");
+
+union sMoveImmToStatusReg {
+	struct {
+		uint32_t immediate : 8;
+		uint32_t rotate : 4;
+		uint32_t mustbe1111 : 4;
+		uint32_t Mask : 4;
+		uint32_t mustbe10 : 2;
+		uint32_t R : 1;
+		uint32_t mustbe00110 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMoveImmToStatusReg) == 4, "sMoveImmToStatusReg size is not 4");
+
+union sBranchExchangeThumb {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe_0x12FFF1 : 24;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sBranchExchangeThumb) == 4, "sBranchExchangeThumb size is not 4");
+
+union sBranchExchangeJava {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe_0x12FFF2 : 24;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sBranchExchangeJava) == 4, "sBranchExchangeJava size is not 4");
+
+union sCountLeadingZeros {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbeF1 : 8;
+		uint32_t Rd : 4;
+		uint32_t mustbe16F : 12;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sCountLeadingZeros) == 4, "sCountLeadingZeros size is not 4");
+
+union sBranchLinkExchangeThumb {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe_0x12FFF3 : 24;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sBranchLinkExchangeThumb) == 4, "sBranchLinkExchangeThumb size is not 4");
+
+union sSaturatingAddSub {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe_0x05 : 8;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe0 : 1;
+		uint32_t opcode : 2;
+		uint32_t mustbe00010 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSaturatingAddSub) == 4, "sSaturatingAddSub size is not 4");
+
+union sSoftwareBreakpoint {
+	struct {
+		uint32_t immediate2 : 4;
+		uint32_t mustbe7 : 4;
+		uint32_t immediate1 : 12;
+		uint32_t mustbe_0x12 : 8;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSoftwareBreakpoint) == 4, "sSoftwareBreakpoint size is not 4");
+
+union sSignedMultiplies {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe0_2 : 1;
+		uint32_t x : 1;
+		uint32_t y : 1;
+		uint32_t mustbe1 : 1;
+		uint32_t Rs : 4;
+		uint32_t Rn : 4;
+		uint32_t Rd : 4;
+		uint32_t mustbe0_1 : 1;
+		uint32_t opcode : 2;
+		uint32_t mustbe00010 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSignedMultiplies) == 4, "sSignedMultiplies size is not 4");
+
+#pragma endregion
+
+#pragma region Multiply instructions
+
+union sMultiplyInstruction {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1001 : 4;
+		uint32_t Rs : 4;
+		uint32_t Rn : 4;
+		uint32_t Rd : 4;
+		uint32_t S : 1;
+		uint32_t A : 1;
+		uint32_t mustbe0 : 6;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMultiplyInstruction) == 4, "sMultiplyInstruction size is not 4");
+
+union sUnsignedMultiplyLong {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1001 : 4;
+		uint32_t Rs : 4;
+		uint32_t RdLo : 4;
+		uint32_t RdHi : 4;
+		uint32_t mustbe_0x04 : 8;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sUnsignedMultiplyLong) == 4, "sUnsignedMultiplyLong size is not 4");
+
+union sMultiplyLongInstruction {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1001 : 4;
+		uint32_t Rs : 4;
+		uint32_t RdLo : 4;
+		uint32_t RdHi : 4;
+		uint32_t S : 1;
+		uint32_t A : 1;
+		uint32_t Unsigned : 1;
+		uint32_t mustbe00001 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMultiplyLongInstruction) == 4, "sMultiplyLongInstruction size is not 4");
+
+#pragma endregion
+
+#pragma region Extra Load/Store instructions
+
+union sSwapInstruction {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1001 : 4;
+		uint32_t mustbe0 : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe00 : 2;
+		uint32_t B : 1;
+		uint32_t mustbe00010 : 5;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSwapInstruction) == 4, "sSwapInstruction size is not 4");
+
+union sLoadStoreRegExclusive {
+	struct {
+		uint32_t mustbeF9F : 12;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t L : 1;
+		uint32_t mustbe0001100 : 7;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadStoreRegExclusive) == 4, "sLoadStoreRegExclusive size is not 4");
+
+union sLoadStoreHalfwordRegOffset {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1011 : 4;
+		uint32_t mustbe0000 : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t L : 1;
+		uint32_t W : 1;
+		uint32_t mustbe0 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadStoreHalfwordRegOffset) == 4, "sLoadStoreHalfwordRegOffset size is not 4");
+
+union sLoadStoreHalfwordImmOffset {
+	struct {
+		uint32_t LoOffset : 4;
+		uint32_t mustbe1011 : 4;
+		uint32_t HiOffset : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t L : 1;
+		uint32_t W : 1;
+		uint32_t mustbe1 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadStoreHalfwordImmOffset) == 4, "sLoadStoreHalfwordImmOffset size is not 4");
+
+union sLoadSignedHalfwordByteImmOffset {
+	struct {
+		uint32_t LoOffset : 4;
+		uint32_t mustbe1_3 : 1;
+		uint32_t H : 1;
+		uint32_t mustbe11 : 2;
+		uint32_t HiOffset : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe1_2 : 1;
+		uint32_t W : 1;
+		uint32_t mustbe1_1 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadSignedHalfwordByteImmOffset) == 4, "sLoadSignedHalfwordByteImmOffset size is not 4");
+
+union sLoadSignedHalfwordByteRegOffset {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1_2 : 1;
+		uint32_t H : 1;
+		uint32_t mustbe11 : 2;
+		uint32_t mustbe0000 : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe1_1 : 1;
+		uint32_t W : 1;
+		uint32_t mustbe0 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadSignedHalfwordByteRegOffset) == 4, "sLoadSignedHalfwordByteRegOffset size is not 4");
+
+union sLoadStoreDoublewordRegOffset {
+	struct {
+		uint32_t Rm : 4;
+		uint32_t mustbe1 : 1;
+		uint32_t St : 1;
+		uint32_t mustbe11 : 2;
+		uint32_t mustbe0000 : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe0_2 : 1;
+		uint32_t W : 1;
+		uint32_t mustbe0_1 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadStoreDoublewordRegOffset) == 4, "sLoadStoreDoublewordRegOffset size is not 4");
+
+union sLoadStoreDoublewordImmOffset {
+	struct {
+		uint32_t LoOffset : 4;
+		uint32_t mustbe1_2 : 1;
+		uint32_t St : 1;
+		uint32_t mustbe11 : 2;
+		uint32_t HiOffset : 4;
+		uint32_t Rd : 4;
+		uint32_t Rn : 4;
+		uint32_t mustbe0 : 1;
+		uint32_t W : 1;
+		uint32_t mustbe1_1 : 1;
+		uint32_t U : 1;
+		uint32_t P : 1;
+		uint32_t mustbe000 : 3;
+		uint32_t condition : 4;
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sLoadStoreDoublewordImmOffset) == 4, "sLoadStoreDoublewordImmOffset size is not 4");
+
+#pragma endregion
+
+#pragma region Media instructions
+
+union sParallelAddSub {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sParallelAddSub) == 4, "sParallelAddSub size is not 4");
+
+union sHalfwordPack {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sHalfwordPack) == 4, "sHalfwordPack size is not 4");
+
+union sWordSaturate {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sWordSaturate) == 4, "sWordSaturate size is not 4");
+
+union sParallelHalfwordSaturate {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sParallelHalfwordSaturate) == 4, "sParallelHalfwordSaturate size is not 4");
+
+union sByteReverseWord {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sByteReverseWord) == 4, "sByteReverseWord size is not 4");
+
+union sByteReversePackedHalfword {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sByteReversePackedHalfword) == 4, "sByteReversePackedHalfword size is not 4");
+
+union sByteReverseSignedHalfword {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sByteReverseSignedHalfword) == 4, "sByteReverseSignedHalfword size is not 4");
+
+union sSelectBytes {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSelectBytes) == 4, "sSelectBytes size is not 4");
+
+union sSignZeroExtend {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSignZeroExtend) == 4, "sSignZeroExtend size is not 4");
+
+union sMultiplies_Type3 {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sMultiplies_Type3) == 4, "sMultiplies_Type3 size is not 4");
+
+union sUnsignedSumOfDifferences {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sUnsignedSumOfDifferences) == 4, "sUnsignedSumOfDifferences size is not 4");
+
+union sUnsignedSumOfDifferencesAcc {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sUnsignedSumOfDifferencesAcc) == 4, "sUnsignedSumOfDifferencesAcc size is not 4");
+
+union sUndefinedInstruction {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sUndefinedInstruction) == 4, "sUndefinedInstruction size is not 4");
+
+#pragma endregion
+
+#pragma region Unconditional instructions
+
+union sChangeProcessorState {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sChangeProcessorState) == 4, "sChangeProcessorState size is not 4");
+
+union sSetEndianness {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSetEndianness) == 4, "sSetEndianness size is not 4");
+
+union sCachePreload {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sCachePreload) == 4, "sCachePreload size is not 4");
+
+union sSaveReturnState {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sSaveReturnState) == 4, "sSaveReturnState size is not 4");
+
+union sReturnFromException {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sReturnFromException) == 4, "sReturnFromException size is not 4");
+
+union sBranchLinkChangeToThumb {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sBranchLinkChangeToThumb) == 4, "sBranchLinkChangeToThumb size is not 4");
+
+union sAdditionalCoprocessorDoubleRegTransf {
+	struct {
+
+	};
+	uint32_t code;
+};
+
+static_assert(sizeof(sAdditionalCoprocessorDoubleRegTransf) == 4, "sAdditionalCoprocessorDoubleRegTransf size is not 4");
+
+#pragma endregion
 
 #pragma pack(pop)
 
@@ -284,12 +823,13 @@ private:
 	uint32_t opcode{ 0 };
 public:
 	eInstructCode decodedInstructCode{ INSTRUCT_NULL };
-
 	sInstruction* pInstruction;
+
+	// ======= Instructions =======
+	// Basics
 	sDataProcImmShift* pDataProcImmShift;
 	sDataProcRegShift* pDataProcRegShift;
 	sDataProcImm* pDataProcImm;
-	sMoveImmToStatusReg* pMoveImmToStatusReg;
 	sLoadStoreImmOffset* pLoadStoreImmOffset;
 	sLoadStoreRegOffset* pLoadStoreRegOffset;
 	sLoadStoreMultiple* pLoadStoreMultiple;
@@ -298,6 +838,59 @@ public:
 	sCoprocDataProc* pCoprocDataProc;
 	sCoprocRegTransf* pCoprocRegTransf;
 	sSoftwareInterrupt* pSoftwareInterrupt;
+
+	// Misc
+	sMoveStatusRegToReg* pMoveStatusRegToReg;
+	sMoveRegToStatusReg* pMoveRegToStatusReg;
+	sMoveImmToStatusReg* pMoveImmToStatusReg;
+	sBranchExchangeThumb* pBranchExchangeThumb;
+	sBranchExchangeJava* pBranchExchangeJava;
+	sCountLeadingZeros* pCountLeadingZeros;
+	sBranchLinkExchangeThumb* pBranchLinkExchangeThumb;
+	sSaturatingAddSub* pSaturatingAddSub;
+	sSoftwareBreakpoint* pSoftwareBreakpoint;
+	sSignedMultiplies* pSignedMultiplies;
+
+	// Multiply
+	sMultiplyInstruction* pMultiplyInstruction;
+	sUnsignedMultiplyLong* pUnsignedMultiplyLong;
+	sMultiplyLongInstruction* pMultiplyLongInstruction;
+
+	// Extra LoadStore
+	sSwapInstruction* pSwapInstruction;
+	sLoadStoreRegExclusive* pLoadStoreRegExclusive;
+	sLoadStoreHalfwordRegOffset* pLoadStoreHalfwordRegOffset;
+	sLoadStoreHalfwordImmOffset* pLoadStoreHalfwordImmOffset;
+	sLoadSignedHalfwordByteImmOffset* pLoadSignedHalfwordByteImmOffset;
+	sLoadSignedHalfwordByteRegOffset* pLoadSignedHalfwordByteRegOffset;
+	sLoadStoreDoublewordRegOffset* pLoadStoreDoublewordRegOffset;
+	sLoadStoreDoublewordImmOffset* pLoadStoreDoublewordImmOffset;
+
+	// Media
+	sParallelAddSub* pParallelAddSub;
+	sHalfwordPack* pHalfwordPack;
+	sWordSaturate* pWordSaturate;
+	sParallelHalfwordSaturate* pParallelHalfwordSaturate;
+	sByteReverseWord* pByteReverseWord;
+	sByteReversePackedHalfword* pByteReversePackedHalfword;
+	sByteReverseSignedHalfword* pByteReverseSignedHalfword;
+	sSelectBytes* pSelectBytes;
+	sSignZeroExtend* pSignZeroExtend;
+	sMultiplies_Type3* pMultiplies_Type3;
+	sUnsignedSumOfDifferences* pUnsignedSumOfDifferences;
+	sUnsignedSumOfDifferencesAcc* pUnsignedSumOfDifferencesAcc;
+	sUndefinedInstruction* pUndefinedInstruction;
+
+	// Unconditional
+	sChangeProcessorState* pChangeProcessorState;
+	sSetEndianness* pSetEndianness;
+	sCachePreload* pCachePreload;
+	sSaveReturnState* pSaveReturnState;
+	sReturnFromException* pReturnFromException;
+	sBranchLinkChangeToThumb* pBranchLinkChangeToThumb;
+	sAdditionalCoprocessorDoubleRegTransf* pAdditionalCoprocessorDoubleRegTransf;
+
+	// ============================
 
 	Instruction();
 
@@ -342,5 +935,5 @@ public:
 
 	bool IsSoftwareInterrupt() const;
 
-	// Getters
+	std::string ToString() const;
 };

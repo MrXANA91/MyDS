@@ -97,7 +97,6 @@ Instruction::Instruction() {
 	pDataProcImmShift = reinterpret_cast<sDataProcImmShift*>(&opcode);
 	pDataProcRegShift = reinterpret_cast<sDataProcRegShift*>(&opcode);
 	pDataProcImm = reinterpret_cast<sDataProcImm*>(&opcode);
-	pMoveImmToStatusReg = reinterpret_cast<sMoveImmToStatusReg*>(&opcode);
 	pLoadStoreImmOffset = reinterpret_cast<sLoadStoreImmOffset*>(&opcode);
 	pLoadStoreRegOffset = reinterpret_cast<sLoadStoreRegOffset*>(&opcode);
 	pLoadStoreMultiple = reinterpret_cast<sLoadStoreMultiple*>(&opcode);
@@ -106,6 +105,52 @@ Instruction::Instruction() {
 	pCoprocDataProc = reinterpret_cast<sCoprocDataProc*>(&opcode);
 	pCoprocRegTransf = reinterpret_cast<sCoprocRegTransf*>(&opcode);
 	pSoftwareInterrupt = reinterpret_cast<sSoftwareInterrupt*>(&opcode);
+
+	pMoveStatusRegToReg = reinterpret_cast<sMoveStatusRegToReg*>(&opcode);
+	pMoveRegToStatusReg = reinterpret_cast<sMoveRegToStatusReg*>(&opcode);
+	pMoveImmToStatusReg = reinterpret_cast<sMoveImmToStatusReg*>(&opcode);
+	pBranchExchangeThumb = reinterpret_cast<sBranchExchangeThumb*>(&opcode);
+	pBranchExchangeJava = reinterpret_cast<sBranchExchangeJava*>(&opcode);
+	pCountLeadingZeros = reinterpret_cast<sCountLeadingZeros*>(&opcode);
+	pBranchLinkExchangeThumb = reinterpret_cast<sBranchLinkExchangeThumb*>(&opcode);
+	pSaturatingAddSub = reinterpret_cast<sSaturatingAddSub*>(&opcode);
+	pSoftwareBreakpoint = reinterpret_cast<sSoftwareBreakpoint*>(&opcode);
+	pSignedMultiplies = reinterpret_cast<sSignedMultiplies*>(&opcode);
+
+	pMultiplyInstruction = reinterpret_cast<sMultiplyInstruction*>(&opcode);
+	pUnsignedMultiplyLong = reinterpret_cast<sUnsignedMultiplyLong*>(&opcode);
+	pMultiplyLongInstruction = reinterpret_cast<sMultiplyLongInstruction*>(&opcode);
+
+	pSwapInstruction = reinterpret_cast<sSwapInstruction*>(&opcode);
+	pLoadStoreRegExclusive = reinterpret_cast<sLoadStoreRegExclusive*>(&opcode);
+	pLoadStoreHalfwordRegOffset = reinterpret_cast<sLoadStoreHalfwordRegOffset*>(&opcode);
+	pLoadStoreHalfwordImmOffset = reinterpret_cast<sLoadStoreHalfwordImmOffset*>(&opcode);
+	pLoadSignedHalfwordByteImmOffset = reinterpret_cast<sLoadSignedHalfwordByteImmOffset*>(&opcode);
+	pLoadSignedHalfwordByteRegOffset = reinterpret_cast<sLoadSignedHalfwordByteRegOffset*>(&opcode);
+	pLoadStoreDoublewordRegOffset = reinterpret_cast<sLoadStoreDoublewordRegOffset*>(&opcode);
+	pLoadStoreDoublewordImmOffset = reinterpret_cast<sLoadStoreDoublewordImmOffset*>(&opcode);
+
+	pParallelAddSub = reinterpret_cast<sParallelAddSub*>(&opcode);
+	pHalfwordPack = reinterpret_cast<sHalfwordPack*>(&opcode);
+	pWordSaturate = reinterpret_cast<sWordSaturate*>(&opcode);
+	pParallelHalfwordSaturate = reinterpret_cast<sParallelHalfwordSaturate*>(&opcode);
+	pByteReverseWord = reinterpret_cast<sByteReverseWord*>(&opcode);
+	pByteReversePackedHalfword = reinterpret_cast<sByteReversePackedHalfword*>(&opcode);
+	pByteReverseSignedHalfword = reinterpret_cast<sByteReverseSignedHalfword*>(&opcode);
+	pSelectBytes = reinterpret_cast<sSelectBytes*>(&opcode);
+	pSignZeroExtend = reinterpret_cast<sSignZeroExtend*>(&opcode);
+	pMultiplies_Type3 = reinterpret_cast<sMultiplies_Type3*>(&opcode);
+	pUnsignedSumOfDifferences = reinterpret_cast<sUnsignedSumOfDifferences*>(&opcode);
+	pUnsignedSumOfDifferencesAcc = reinterpret_cast<sUnsignedSumOfDifferencesAcc*>(&opcode);
+	pUndefinedInstruction = reinterpret_cast<sUndefinedInstruction*>(&opcode);
+
+	pChangeProcessorState = reinterpret_cast<sChangeProcessorState*>(&opcode);
+	pSetEndianness = reinterpret_cast<sSetEndianness*>(&opcode);
+	pCachePreload = reinterpret_cast<sCachePreload*>(&opcode);
+	pSaveReturnState = reinterpret_cast<sSaveReturnState*>(&opcode);
+	pReturnFromException = reinterpret_cast<sReturnFromException*>(&opcode);
+	pBranchLinkChangeToThumb = reinterpret_cast<sBranchLinkChangeToThumb*>(&opcode);
+	pAdditionalCoprocessorDoubleRegTransf = reinterpret_cast<sAdditionalCoprocessorDoubleRegTransf*>(&opcode);
 }
 
 void Instruction::Set(uint32_t opcode) {
@@ -126,4 +171,8 @@ void Instruction::SetDecode(eInstructCode instruct) {
 
 const eInstructCode Instruction::GetDecode() const {
 	return decodedInstructCode;
+}
+
+std::string Instruction::ToString() const {
+	return "";
 }
