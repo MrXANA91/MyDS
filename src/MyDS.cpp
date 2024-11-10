@@ -5,10 +5,13 @@
 
 static void InitArm9Memory(ARM9_mem &mem);
 static void ClearArm9MemReg(ARM9_mem mem, uint32_t startAddr, size_t size, int value = 0);
-static void LoadARM9BIOS(ARM9_mem& mem, std::string biospath);
+static bool LoadARM9BIOS(ARM9_mem& mem, std::string biospath);
 
-static Cpu arm9;
-static ARM9_mem mem;
+static Cpu* arm9 = new Cpu(ARMv5_ARM9);
+static Cpu* arm7 = new Cpu(ARMv4_ARM7);
+static ARM9_mem mem9;
+static ARM9_mem mem7;
+
 static uint64_t execInstr{ 0 };
 static std::chrono::steady_clock::time_point start;
 static std::chrono::steady_clock::time_point end;
@@ -39,50 +42,60 @@ int main()
 	std::cout << "=============================" << "\n";
 	std::cout << "\n";
 
-	NDSRom nds("..\\NDS-Files\\TinyFB.nds");
-
 	std::cout << "CPU : arm9\n";
+	arm9->SetMMU(&mem9);
+	InitArm9Memory(mem9);
+
+	NDSRom nds("..\\NDS-Files\\TinyFB.nds");
 	if (nds.IsOpened()) {
-		std::cout << "TinyFB.nds successfully opened\n";
+		std::cout << "TinyFB.nds successfully opened :\n";
+		nds.WriteProgramToARM9Memory(mem9);
+		std::cout << "\t- ARM9 Start address : 0x" << std::hex << nds.GetARM9StartAddress() << std::dec << "\n";
+		std::cout << "\t- ARM7 Start address : 0x" << std::hex << nds.GetARM7StartAddress() << std::dec << "\n";
 	}
 	else {
-		std::cout << "Could not load TinyFB.nds file, exiting.\n";
-		return -1;
+		std::cout << "Could not load TinyFB.nds file\n";
 	}
 
-	arm9.SetMMU(&mem);
-	InitArm9Memory(mem);
-	nds.SetARM9ProgramMemory(mem);
-	//LoadARM9BIOS(mem, "..\\NDS-Files\\Bios\\biosnds9.rom");
-	//arm9.SetBootAddr(mem.BIOS_ADDR);
-	arm9.SetBootAddr(nds.GetARM9StartAddress());
+	if (LoadARM9BIOS(mem9, "..\\NDS-Files\\Bios\\biosnds9.rom")) {
+		std::cout << "ARM9 bios successfully loaded\n";
+	}
+	else {
+		std::cout << "Could not load ARM9 bios file\n";
+	}
 
+	arm9->SetBootAddr(mem9.BIOS_ADDR);
+	std::cout << "Boot address set to : 0x" << std::hex << mem9.BIOS_ADDR << std::dec << "\n";
 	std::cout << "Emulator setup finished.\n> ";
+
+	Cpu* currentCpu = arm9;
 
 	char command[50];
 
 	uint32_t addr{ 0 };
 	int bpIndex{ 0 };
-	pc = arm9.GetReg(REG_PC);
+	pc = currentCpu->GetReg(REG_PC);
 
-	while (true) {
+
+	bool programRunning = true;
+	while (programRunning) {
 		std::cin >> command;
 
 		switch (command[0]) {
 		case 's':
-			arm9.DebugStep();
+			currentCpu->DebugStep();
 			break;
 		case 'm':
 			std::cout << "Enter mem address as hex address to read : 0x";
 			std::cin >> std::hex >> addr >> std::dec;
-			std::cout << "Word = 0x" << std::hex << mem.GetWordAtPointer(mem.GetPointerFromAddr(addr)) << "\n";
+			std::cout << "Word = 0x" << std::hex << mem9.GetWordAtPointer(mem9.GetPointerFromAddr(addr)) << "\n";
 			break;
 		case 'd':
-			arm9.DisplayRegisters();
+			currentCpu->DisplayRegisters();
 			break;
 		case 'b':
 			if (command[1] == '\n' || command[1] == '\0' || command[1] == 'd') {
-				arm9.DisplayBreakpoints();
+				currentCpu->DisplayBreakpoints();
 				if (command[1] == 'd') break;
 				std::cout << "n: new breakpoint / t: toggle breakpoint / r: remove breakpoint\nBREAKPOINT > ";
 				std::cin >> command;
@@ -94,7 +107,7 @@ int main()
 			case 'n':
 				std::cout << "Enter program address to stop execution : 0x";
 				std::cin >> std::hex >> bpAddr >> std::dec;
-				if (arm9.SetBreakpoint(bpAddr)) {
+				if (currentCpu->SetBreakpoint(bpAddr)) {
 					std::cout << "Program will stop at address 0x" << std::hex << bpAddr << std::dec << "\n";
 				}
 				else {
@@ -104,7 +117,7 @@ int main()
 			case 't':
 				std::cout << "Enter breakpoint id to toggle : ";
 				std::cin >> bpIndex;
-				if (arm9.ToggleBreakpoint(bpIndex)) {
+				if (currentCpu->ToggleBreakpoint(bpIndex)) {
 					std::cout << "Successfully toggled breakpoint " << bpIndex << "\n";
 				}
 				else {
@@ -114,7 +127,7 @@ int main()
 			case 'r':
 				std::cout << "Enter breakpoint id to remove : ";
 				std::cin >> bpIndex;
-				if (arm9.RemoveBreakpoint(bpIndex)) {
+				if (currentCpu->RemoveBreakpoint(bpIndex)) {
 					std::cout << "Successfully removed breakpoint " << bpIndex << "\n";
 				}
 				else {
@@ -126,12 +139,12 @@ int main()
 			}
 			break;
 		case 'e':
-			if (arm9.IsRunning()) {
-				arm9.Stop();
+			if (currentCpu->IsRunning()) {
+				currentCpu->Stop();
 				std::cout << "CPU stopped.\n";
 			}
 			else {
-				arm9.Run();
+				currentCpu->Run();
 				std::cout << "CPU running...\n";
 			}
 			break;
@@ -142,19 +155,33 @@ int main()
 			std::cout << "q: exit program\n";
 			break;
 		case 'r':
-			arm9.Reset();
-			pc = arm9.GetReg(REG_PC);
-			std::cout << "PC : 0x" << std::hex << pc << std::dec << "\n";
-			std::cout << "CPU has been reset.\n";
+			if (command[1] != 'a') {
+				currentCpu->Reset();
+				pc = currentCpu->GetReg(REG_PC);
+				std::cout << "PC : 0x" << std::hex << pc << std::dec << "\n";
+				std::cout << "CPU has been reset.\n";
+			}
+			else {
+				std::cout << "Enter new boot address as hex address : 0x";
+				std::cin >> std::hex >> addr >> std::dec;
+				if (currentCpu->SetBootAddr(addr)) {
+					std::cout << "New boot address set" << "\n";
+				}
+				else {
+					std::cout << "Could not set boot address" << "\n";
+				}
+			}
 			break;
 		case 'q':
 			std::cout << "Exiting program.\n";
-			return 1;
+			programRunning = false;
 		}
 		
 		std::cout << "> ";
 	}
 
+	delete arm9;
+	delete arm7;
 	return 0;
 }
 
@@ -202,7 +229,7 @@ static void ClearArm9MemReg(ARM9_mem mem, uint32_t startAddr, size_t size, int v
 	memset(ptr, value, size);
 }
 
-static void LoadARM9BIOS(ARM9_mem& mem, std::string biospath) {
+static bool LoadARM9BIOS(ARM9_mem& mem, std::string biospath) {
 	std::streampos size;
 	char* memblock = nullptr;
 
@@ -215,10 +242,18 @@ static void LoadARM9BIOS(ARM9_mem& mem, std::string biospath) {
 		file.seekg(0, std::ios::beg);
 		file.read(memblock, size);
 	}
+	else {
+		return false;
+	}
 
 	if (memblock != nullptr) {
 		if (static_cast<size_t>(size) > mem.BIOS_SIZE) size = mem.BIOS_SIZE;
 		uint8_t* ptr = mem.GetPointerFromAddr(mem.BIOS_ADDR);
 		memcpy(ptr, const_cast<const char*>(memblock), size);
 	}
+	else {
+		return false;
+	}
+
+	return true;
 }

@@ -91,7 +91,7 @@ public:
 	/// Write ARM9 program into virtual ARM memory
 	/// </summary>
 	/// <param name="mem">Reference to ARM9 virtual memory</param>
-	void SetARM9ProgramMemory(ARM_mem &mem);
+	void WriteProgramToARM9Memory(ARM_mem &mem);
 
 	/// <summary>
 	/// Get ARM9 entry address in virtual ARM memory

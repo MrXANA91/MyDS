@@ -104,13 +104,10 @@ std::string Cpu::eInstructCodeToString(eInstructCode instruct, std::string &othe
 
 #pragma endregion
 
-Cpu::Cpu() {
-	cpsr.value = 0;
-	cpsr.bits.Mode = Supervisor;
-	cpsr.bits.I = 1;
-	cpsr.bits.F = 1;
+Cpu::Cpu(ARMInstructionSet instructionSet) {
+	Reset();
 
-
+	this->instructionSet = instructionSet;
 }
 
 bool Cpu::SetBootAddr(uint32_t bootAddr) {

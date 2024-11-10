@@ -58,9 +58,15 @@ enum CpuMode : uint16_t {
 	System = 0x1F,			// (privileged 'User' mode)
 };
 
+enum ARMInstructionSet {
+	ARMv4_ARM7,
+	ARMv5_ARM9,
+};
+
 class Cpu {
 private:
 	ARM_mem* memory;
+	ARMInstructionSet instructionSet;
 
 	uint32_t bootAddress{ 0 };
 
@@ -161,7 +167,7 @@ private:
 public:
 	bool Debug{ false };
 
-	Cpu();
+	Cpu(ARMInstructionSet instructionSet);
 
 	/// <summary>
 	/// Set starting CPU (or boot) address. PC will not be changed if CPU already running.

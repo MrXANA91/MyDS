@@ -32,7 +32,7 @@ std::ifstream NDSRom::OpenFile(std::string filepath, NDSHeader* header) {
 
 bool NDSRom::IsOpened() { return file.is_open(); }
 
-void NDSRom::SetARM9ProgramMemory(ARM_mem& mem) {
+void NDSRom::WriteProgramToARM9Memory(ARM_mem& mem) {
 	uint8_t* ptr = mem.GetPointerFromAddr(header.ARM9_EntryAddress);
 
 	file.seekg(header.ARM9_ROMOffset, std::ios::beg);
