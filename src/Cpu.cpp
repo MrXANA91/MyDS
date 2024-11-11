@@ -9,8 +9,7 @@ void Cpu::DisplayRegisters() {
 	}
 }
 
-std::string Cpu::eConditionToString(eCondition cond)
-{
+std::string Cpu::eConditionToString(eCondition cond) {
 	switch (cond) {
 	case EQ: return "Equal / zero";
 	case NE: return "Not equal";
@@ -70,7 +69,7 @@ std::string Cpu::eShiftTypeToString(eShiftType shift) {
 std::string Cpu::eInstructCodeToString(eInstructCode instruct, std::string &othertext) {
 	switch (instruct) {
 	default:
-	case INSTRUCT_NULL:
+	case INSTRUCT_NOP:
 		return "INSTRUCT_NULL";
 	case INSTRUCT_DATA_PROC_IMM_SHIFT:
 		othertext = " - " + eALUOpCodeToString(aluOpcode);
@@ -362,123 +361,133 @@ void Cpu::Fetch() {
 void Cpu::Decode() {
 	instruction.DecodeReset();
 
-	do {
-		if (instruction.IsDataProcImmShift()) {
-			if (instruction.IsMiscellaneous()) {
-
-				break;
-			}
-
-			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImmShift->opcode);
-			SetFlags = this->instruction.pDataProcImmShift->S != 0;
-			Rn = this->instruction.pDataProcImmShift->Rn;
-			Rd = this->instruction.pDataProcImmShift->Rd;
-			ShiftAmount = this->instruction.pDataProcImmShift->shiftAmount;
-			Shift = static_cast<eShiftType>(this->instruction.pDataProcImmShift->shift);
-			Rm = this->instruction.pDataProcImmShift->Rm;
-
-			this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM_SHIFT);
-		}
-		else if (instruction.IsDataProcRegShift()) {
-			if (instruction.IsMiscellaneous()) {
-
-				break;
-			}
-			else if (instruction.IsMultipliesOrExtraLoadStore()) {
-
-				break;
-			}
-
-			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcRegShift->opcode);
-			SetFlags = this->instruction.pDataProcRegShift->S != 0;
-			Rn = this->instruction.pDataProcRegShift->Rn;
-			Rd = this->instruction.pDataProcRegShift->Rd;
-			Rs = this->instruction.pDataProcRegShift->Rs;
-			Shift = static_cast<eShiftType>(this->instruction.pDataProcRegShift->shift);
-			Rm = this->instruction.pDataProcRegShift->Rm;
-
-			this->instruction.SetDecode(INSTRUCT_DATA_PROC_REG_SHIFT);
-		}
-		else if (instruction.IsDataProcImm()) {
-			if (instruction.IsUndefined()) {
-
-				break;
-			}
-			else if (instruction.IsMoveImmToStatusReg()) {
-				Mask = this->instruction.pMoveImmToStatusReg->Mask;
-				Rotate = this->instruction.pMoveImmToStatusReg->rotate;
-				Immediate = this->instruction.pMoveImmToStatusReg->immediate;
-
-				this->instruction.SetDecode(INSTRUCT_MOVE_IMM_TO_STATUS_REG);
-				break;
-			}
-
-			aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImm->opcode);
-			SetFlags = this->instruction.pDataProcImm->S != 0;
-			Rn = this->instruction.pDataProcImm->Rn;
-			Rd = this->instruction.pDataProcImm->Rd;
-			Rotate = this->instruction.pDataProcImm->rotate;
-			Immediate = this->instruction.pDataProcImm->immediate;
-
-			this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM);
-		}
-		else if (instruction.IsLoadStoreImmOffset()) {
-			Rn = this->instruction.pLoadStoreImmOffset->Rn;
-			Rd = this->instruction.pLoadStoreImmOffset->Rd;
-			Immediate = this->instruction.pLoadStoreImmOffset->immediate;
-
-			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_IMM_OFFSET);
-		}
-		else if (instruction.IsLoadStoreRegOffset()) {
-			if (instruction.IsMedia()) {
-
-				break;
-			}
-			else if (instruction.IsArchUndefined()) {
-
-				break;
-			}
-
-			Rn = this->instruction.pLoadStoreRegOffset->Rn;
-			Rd = this->instruction.pLoadStoreRegOffset->Rd;
-			ShiftAmount = this->instruction.pLoadStoreRegOffset->shiftAmount;
-			Shift = static_cast<eShiftType>(this->instruction.pLoadStoreRegOffset->shift);
-			Rm = this->instruction.pLoadStoreRegOffset->Rm;
-
-			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_REG_OFFSET);
-		}
-		else if (instruction.IsLoadStoreMultiple()) {
-			Rn = this->instruction.pLoadStoreMultiple->Rn;
-
-			this->instruction.SetDecode(INSTRUCT_LOAD_STORE_MULTIPLE);
-		}
-		else if (instruction.IsBranch()) {
-			Offset = this->instruction.pBranchInstruction->offset;
-
-			this->instruction.SetDecode(INSTRUCT_BRANCH_BRANCHLINK);
-		}
-		else if (instruction.IsCoprocLoadStore_DoubleRegTransf()) {
-			Rn = this->instruction.pCoprocLoadStore_DoubleRegTransf->Rn;
-			Offset = this->instruction.pCoprocLoadStore_DoubleRegTransf->offset;
-
-			this->instruction.SetDecode(INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF);
-		}
-		else if (instruction.IsCoprocRegTransf()) {
-			this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
-		}
-		else if (instruction.IsCoprocRegTransf()) {
-			this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
-		}
-		else if (instruction.IsSoftwareInterrupt()) {
-			this->instruction.SetDecode(INSTRUCT_SOFTWARE_INTERRUPT);
-		}
-		else if (instruction.IsUnconditional()) {
-
-		}
-	} while (false);
+	DecodeInstructions();
 
 	std::string othertext = "";
 	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(this->instruction.GetDecode(), othertext) << othertext << "\n";
+}
+
+void Cpu::DecodeInstructions() {
+	if (instruction.IsDataProcImmShift()) {
+		if (instruction.IsMiscellaneous()) {
+			DecodeMiscInstructions();
+			return;
+		}
+
+		aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImmShift->opcode);
+		SetFlags = this->instruction.pDataProcImmShift->S != 0;
+		Rn = this->instruction.pDataProcImmShift->Rn;
+		Rd = this->instruction.pDataProcImmShift->Rd;
+		ShiftAmount = this->instruction.pDataProcImmShift->shiftAmount;
+		Shift = static_cast<eShiftType>(this->instruction.pDataProcImmShift->shift);
+		Rm = this->instruction.pDataProcImmShift->Rm;
+
+		this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM_SHIFT);
+	}
+	else if (instruction.IsDataProcRegShift()) {
+		if (instruction.IsMiscellaneous()) {
+			DecodeMiscInstructions();
+			return;
+		}
+		else if (instruction.IsMultipliesOrExtraLoadStore()) {
+			DecodeMultiplyOrExtraLoadStoreInstructions();
+			return;
+		}
+
+		aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcRegShift->opcode);
+		SetFlags = this->instruction.pDataProcRegShift->S != 0;
+		Rn = this->instruction.pDataProcRegShift->Rn;
+		Rd = this->instruction.pDataProcRegShift->Rd;
+		Rs = this->instruction.pDataProcRegShift->Rs;
+		Shift = static_cast<eShiftType>(this->instruction.pDataProcRegShift->shift);
+		Rm = this->instruction.pDataProcRegShift->Rm;
+
+		this->instruction.SetDecode(INSTRUCT_DATA_PROC_REG_SHIFT);
+	}
+	else if (instruction.IsDataProcImm()) {
+		if (instruction.IsUndefined()) {
+			DecodeUndefinedInstructions();
+			return;
+		}
+		else if (instruction.IsMoveImmToStatusReg()) {
+			Mask = this->instruction.pMoveImmToStatusReg->Mask;
+			Rotate = this->instruction.pMoveImmToStatusReg->rotate;
+			Immediate = this->instruction.pMoveImmToStatusReg->immediate;
+
+			this->instruction.SetDecode(INSTRUCT_MOVE_IMM_TO_STATUS_REG);
+			return;
+		}
+
+		aluOpcode = static_cast<eALUOpCode>(this->instruction.pDataProcImm->opcode);
+		SetFlags = this->instruction.pDataProcImm->S != 0;
+		Rn = this->instruction.pDataProcImm->Rn;
+		Rd = this->instruction.pDataProcImm->Rd;
+		Rotate = this->instruction.pDataProcImm->rotate;
+		Immediate = this->instruction.pDataProcImm->immediate;
+
+		this->instruction.SetDecode(INSTRUCT_DATA_PROC_IMM);
+	}
+	else if (instruction.IsLoadStoreImmOffset()) {
+		Rn = this->instruction.pLoadStoreImmOffset->Rn;
+		Rd = this->instruction.pLoadStoreImmOffset->Rd;
+		Immediate = this->instruction.pLoadStoreImmOffset->immediate;
+
+		this->instruction.SetDecode(INSTRUCT_LOAD_STORE_IMM_OFFSET);
+	}
+	else if (instruction.IsLoadStoreRegOffset()) {
+		if (instruction.IsMedia()) {
+			DecodeMediaInstructions();
+			return;
+		}
+		else if (instruction.IsArchUndefined()) {
+			DecodeArchUndefinedInstructions();
+			return;
+		}
+
+		Rn = this->instruction.pLoadStoreRegOffset->Rn;
+		Rd = this->instruction.pLoadStoreRegOffset->Rd;
+		ShiftAmount = this->instruction.pLoadStoreRegOffset->shiftAmount;
+		Shift = static_cast<eShiftType>(this->instruction.pLoadStoreRegOffset->shift);
+		Rm = this->instruction.pLoadStoreRegOffset->Rm;
+
+		this->instruction.SetDecode(INSTRUCT_LOAD_STORE_REG_OFFSET);
+	}
+	else if (instruction.IsLoadStoreMultiple()) {
+		Rn = this->instruction.pLoadStoreMultiple->Rn;
+
+		this->instruction.SetDecode(INSTRUCT_LOAD_STORE_MULTIPLE);
+	}
+	else if (instruction.IsBranch()) {
+		Offset = this->instruction.pBranchInstruction->offset;
+
+		this->instruction.SetDecode(INSTRUCT_BRANCH_BRANCHLINK);
+	}
+	else if (instruction.IsCoprocLoadStore_DoubleRegTransf()) {
+		Rn = this->instruction.pCoprocLoadStore_DoubleRegTransf->Rn;
+		Offset = this->instruction.pCoprocLoadStore_DoubleRegTransf->offset;
+
+		this->instruction.SetDecode(INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF);
+	}
+	else if (instruction.IsCoprocRegTransf()) {
+		this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
+	}
+	else if (instruction.IsCoprocRegTransf()) {
+		this->instruction.SetDecode(INSTRUCT_COPROC_REG_TRANSF);
+	}
+	else if (instruction.IsSoftwareInterrupt()) {
+		this->instruction.SetDecode(INSTRUCT_SOFTWARE_INTERRUPT);
+	}
+	else if (instruction.IsUnconditional()) {
+		DecodeUnconditionalInstructions();
+	}
+}
+
+void Cpu::DecodeUndefinedInstructions() {
+	this->instruction.SetDecode(INSTRUCT_NOP);
+}
+
+void Cpu::DecodeArchUndefinedInstructions() {
+	this->instruction.SetDecode(INSTRUCT_NOP);
 }
 
 void Cpu::Execute() {
@@ -494,7 +503,7 @@ void Cpu::Execute() {
 
 	switch (this->instruction.GetDecode()) {
 	default:
-	case INSTRUCT_NULL:
+	case INSTRUCT_NOP:
 
 		break;
 		// ======== Basic ========

@@ -132,7 +132,24 @@ private:
 
 	bool IsConditionOK() const;
 
+	// ========== EXCEPTIONS ============
+	void ThrowReset();
+	void ThrowUndefined();
+	void ThrowSWI();
+	void ThrowPrefetchAbort();
+	void ThrowDataAbort();
+	void ThrowIRQ();
+	void ThrowFIQ();
+	// ==================================
+
 	// ========== INSTRUCTIONS ==========
+	void DecodeInstructions();
+	void DecodeMiscInstructions();
+	void DecodeMultiplyOrExtraLoadStoreInstructions();
+	void DecodeUndefinedInstructions();
+	void DecodeMediaInstructions();
+	void DecodeArchUndefinedInstructions();
+	void DecodeUnconditionalInstructions();
 	// Basics
 	void DataProcImmShift();
 	void DataProcRegShift();

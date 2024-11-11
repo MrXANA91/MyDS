@@ -12,6 +12,10 @@ bool Instruction::IsDataProcImmShift() const {
 		(!IsConditionReserved());
 }
 
+/// <summary>
+/// Instructions must already be DataProcImmShift or DataProcRegShift
+/// </summary>
+/// <returns></returns>
 bool Instruction::IsMiscellaneous() const {
 	return ((pDataProcImmShift->opcode & 0b1100) == 0b1000) && (pDataProcImmShift->S == 0) &&
 		((((pDataProcImmShift->shiftAmount & 0x1) == 0) && (pDataProcImmShift->mustbe0 == 1)) || (pDataProcImmShift->mustbe0 == 0));
@@ -24,6 +28,10 @@ bool Instruction::IsDataProcRegShift() const {
 		(!IsConditionReserved());
 }
 
+/// <summary>
+/// Instructions must already be DataProcRegShift
+/// </summary>
+/// <returns></returns>
 bool Instruction::IsMultipliesOrExtraLoadStore() const {
 	return (pDataProcRegShift->mustbe0 == 1);
 }
@@ -32,15 +40,12 @@ bool Instruction::IsDataProcImm() const {
 	return (pDataProcImm->mustbe001 == 1) && (!IsConditionReserved());
 }
 
+/// <summary>
+/// Instructions must already be DataProcImm
+/// </summary>
+/// <returns></returns>
 bool Instruction::IsUndefined() const {
 	return ((pDataProcImm->opcode & 0b1101) == 0b1000) && (pDataProcImm->S == 0);
-}
-
-bool Instruction::IsMoveImmToStatusReg() const {
-	return (pMoveImmToStatusReg->mustbe00110 == 0b00110) &&
-		(pMoveImmToStatusReg->mustbe10 == 0b10) &&
-		(pMoveImmToStatusReg->mustbe1111 == 0b1111) &&
-		(!IsConditionReserved());
 }
 
 bool Instruction::IsLoadStoreImmOffset() const {
@@ -53,10 +58,18 @@ bool Instruction::IsLoadStoreRegOffset() const {
 		(!IsConditionReserved());
 }
 
+/// <summary>
+/// Instruction must be LoadStoreRegOffset
+/// </summary>
+/// <returns></returns>
 bool Instruction::IsMedia() const {
 	return (pLoadStoreRegOffset->mustbe0 == 1) && (!IsArchUndefined());
 }
 
+/// <summary>
+/// Instruction must be LoadStoreRegOffset
+/// </summary>
+/// <returns></returns>
 bool Instruction::IsArchUndefined() const {
 	return (pLoadStoreRegOffset->P == 1) && (pLoadStoreRegOffset->U == 1) && (pLoadStoreRegOffset->B == 1) && (pLoadStoreRegOffset->W == 1) && (pLoadStoreRegOffset->L == 1) &&
 		((pLoadStoreRegOffset->shiftAmount&0x1)==1) && (pLoadStoreRegOffset->shift == 0b11) && (pLoadStoreRegOffset->mustbe0 == 1);
@@ -162,7 +175,7 @@ const uint32_t Instruction::Get() const {
 }
 
 void Instruction::DecodeReset() {
-	SetDecode(INSTRUCT_NULL);
+	SetDecode(INSTRUCT_NOP);
 }
 
 void Instruction::SetDecode(eInstructCode instruct) {

@@ -52,7 +52,7 @@ enum eShiftType : uint8_t {
 };
 
 enum eInstructCode : int {
-	INSTRUCT_NULL,
+	INSTRUCT_NOP,
 	// Basic
 	INSTRUCT_DATA_PROC_IMM_SHIFT,
 	INSTRUCT_DATA_PROC_REG_SHIFT,
@@ -868,7 +868,7 @@ class Instruction {
 private:
 	uint32_t opcode{ 0 };
 public:
-	eInstructCode decodedInstructCode{ INSTRUCT_NULL };
+	eInstructCode decodedInstructCode{ INSTRUCT_NOP };
 	sInstruction* pInstruction;
 
 	// ======= Instructions =======
