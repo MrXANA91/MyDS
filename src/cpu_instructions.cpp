@@ -75,7 +75,7 @@ void Cpu::LoadStoreImmOffset(sLoadStoreImmOffset* instruction) {
 			Operand -= Immediate;
 		}
 		// WriteBack always enabled
-		ARM_mem::SetWordAtPointer(startPtr, Operand);
+		SetReg(Rn, U_add ? Rn_value + Operand : Rn_value - Operand);
 	}
 
 	// Execute...
@@ -113,7 +113,6 @@ void Cpu::LoadStoreMultiple(sLoadStoreMultiple* instruction) {
 	bool W_writeBack = instruction->W;
 	bool L_load = instruction->L;
 
-	Rn_value = GetReg(Rn);
 	if (P_excluded) {
 		if (U_upward) {
 			Rn_value += 4;

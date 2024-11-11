@@ -135,7 +135,6 @@ Instruction::Instruction() {
 	pMultiplyLongInstruction = reinterpret_cast<sMultiplyLongInstruction*>(&opcode);
 
 	pSwapInstruction = reinterpret_cast<sSwapInstruction*>(&opcode);
-	pLoadStoreRegExclusive = reinterpret_cast<sLoadStoreRegExclusive*>(&opcode);
 	pLoadStoreHalfwordRegOffset = reinterpret_cast<sLoadStoreHalfwordRegOffset*>(&opcode);
 	pLoadStoreHalfwordImmOffset = reinterpret_cast<sLoadStoreHalfwordImmOffset*>(&opcode);
 	pLoadSignedHalfwordByteImmOffset = reinterpret_cast<sLoadSignedHalfwordByteImmOffset*>(&opcode);

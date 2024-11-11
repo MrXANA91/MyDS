@@ -182,8 +182,7 @@ private:
 	
 	// Extra Load/Store
 	void SwapInstruction(sSwapInstruction* instruction);
-	void LoadStoreRegExclusive(sLoadStoreRegExclusive* instruction);
-	void LoadStoreHalfwordRegOffset(sLoadStoreHalfwordRegOffset* instruction);
+	void LoadStoreHalfwordRegOffset(sLoadStoreHalfwordImmOffset* instruction);
 	void LoadStoreHalfwordImmOffset(sLoadStoreHalfwordImmOffset* instruction);
 	void LoadSignedHalfwordByteImmOffset(sLoadSignedHalfwordByteImmOffset* instruction);
 	void LoadSignedHalfwordByteRegOffset(sLoadSignedHalfwordByteRegOffset* instruction);

@@ -66,41 +66,6 @@ std::string Cpu::eShiftTypeToString(eShiftType shift) {
 	}
 }
 
-std::string Cpu::eInstructCodeToString(eInstructCode instruct, std::string &othertext) {
-	switch (instruct) {
-	default:
-	case INSTRUCT_NOP:
-		return "INSTRUCT_NULL";
-	case INSTRUCT_DATA_PROC_IMM_SHIFT:
-		othertext = " - " + eALUOpCodeToString(aluOpcode);
-		return "INSTRUCT_DATA_PROC_IMM_SHIFT";
-	case INSTRUCT_DATA_PROC_REG_SHIFT:
-		othertext = " - " + eALUOpCodeToString(aluOpcode);
-		return "INSTRUCT_DATA_PROC_REG_SHIFT";
-	case INSTRUCT_DATA_PROC_IMM:
-		othertext = " - " + eALUOpCodeToString(aluOpcode);
-		return "INSTRUCT_DATA_PROC_IMM";
-	case INSTRUCT_MOVE_IMM_TO_STATUS_REG:
-		return "INSTRUCT_MOVE_IMM_STATUS_REG";
-	case INSTRUCT_LOAD_STORE_IMM_OFFSET:
-		return "INSTRUCT_LOAD_STORE_IMM_OFFSET";
-	case INSTRUCT_LOAD_STORE_REG_OFFSET:
-		return "INSTRUCT_LOAD_STORE_REG_OFFSET";
-	case INSTRUCT_LOAD_STORE_MULTIPLE:
-		return "INSTRUCT_LOAD_STORE_MULTIPLE";
-	case INSTRUCT_BRANCH_BRANCHLINK:
-		return "INSTRUCT_BRANCH_BRANCHLINK";
-	case INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF:
-		return "INSTRUCT_COPROC_LOAD_STORE_DOUBLE_REG_TRANSF";
-	case INSTRUCT_COPROC_DATA_PROC:
-		return "INSTRUCT_COPROC_DATA_PROC";
-	case INSTRUCT_COPROC_REG_TRANSF:
-		return "INSTRUCT_COPROC_REG_TRANSF";
-	case INSTRUCT_SOFTWARE_INTERRUPT:
-		return "INSTRUCT_SOFTWARE_INTERRUPT";
-	}
-}
-
 #pragma endregion
 
 Cpu::Cpu(ARMInstructionSet instructionSet) {
@@ -329,8 +294,8 @@ void Cpu::runThreadFunc() {
 	}
 	end = high_resolution_clock::now();
 
-	std::cout << "Stopping.\n";
-	std::cout << "Executed " << execInstr << " instructions in " << duration_cast<microseconds>(end - start) << "\n";
+	std::cout << (instructionSet == ARMv5_ARM9 ? "ARM9: " : "ARM7: ") << "Stopping.\n";
+	std::cout << (instructionSet == ARMv5_ARM9 ? "ARM9: " : "ARM7: ") << "Executed " << execInstr << " instructions in " << duration_cast<microseconds>(end - start) << "\n";
 }
 
 void Cpu::Run() {
@@ -351,7 +316,7 @@ void Cpu::Fetch() {
 
 	uint32_t fetchedInstruction = static_cast<uint32_t>(ARM_mem::GetBytesAtPointer(ptr, opsize));
 	instruction.Set(fetchedInstruction);
-	if (Debug) std::cout << "Instruction = 0x" << std::hex << fetchedInstruction << std::dec;
+	if (Debug) std::cout << (instructionSet == ARMv5_ARM9 ? "ARM9: " : "ARM7: ") << "Instruction = 0x" << std::hex << fetchedInstruction << std::dec;
 	if (Debug) std::cout << " - Condition : " << eConditionToString(static_cast<eCondition>(instruction.pInstruction->condition));
 	if (Debug) std::cout << "\n";
 
@@ -364,7 +329,8 @@ void Cpu::Decode() {
 	DecodeInstructions();
 
 	std::string othertext = "";
-	if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(this->instruction.GetDecode(), othertext) << othertext << "\n";
+	//if (Debug) std::cout << "Decoded instruction : " << eInstructCodeToString(this->instruction.GetDecode(), othertext) << othertext << "\n";
+	//if (Debug) std::cout << "Decoded instruction : '" << this->instruction.ToString() << "'\n";
 }
 
 void Cpu::DecodeInstructions() {
@@ -582,18 +548,15 @@ void Cpu::Execute() {
 	//	MultiplyLongInstruction(this->instruction.pMultiplyLongInstruction);
 	//	break;
 		// ======== Extra Load/Store ========
-	//case INSTRUCT_SWAP:
-	//	SwapInstruction(this->instruction.pSwapInstruction);
-	//	break;
-	//case INSTRUCT_LOAD_STORE_REG_EXCLUSIVE:
-	//	LoadStoreRegExclusive(this->instruction.pLoadStoreRegExclusive);
-	//	break;
-	//case INSTRUCT_LOAD_STORE_HALFWORD_REG_OFFSET:
-	//	LoadStoreHalfwordRegOffset(this->instruction.pLoadStoreHalfwordRegOffset);
-	//	break;
-	//case INSTRUCT_LOAD_STORE_HALFWORD_IMM_OFFSET:
-	//	LoadStoreHalfwordImmOffset(this->instruction.pLoadStoreHalfwordImmOffset);
-	//	break;
+	case INSTRUCT_SWAP:
+		SwapInstruction(this->instruction.pSwapInstruction);
+		break;
+	case INSTRUCT_LOAD_STORE_HALFWORD_REG_OFFSET:
+		LoadStoreHalfwordRegOffset(this->instruction.pLoadStoreHalfwordImmOffset);
+		break;
+	case INSTRUCT_LOAD_STORE_HALFWORD_IMM_OFFSET:
+		LoadStoreHalfwordImmOffset(this->instruction.pLoadStoreHalfwordImmOffset);
+		break;
 	//case INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_IMM_OFFSET:
 	//	LoadSignedHalfwordByteImmOffset(this->instruction.pLoadSignedHalfwordByteImmOffset);
 	//	break;
@@ -679,6 +642,8 @@ void Cpu::DisplayBreakpoints() {
 	uint32_t addr{ 0 };
 
 	int breakpointsNumber = breakpoint.GetSize();
+
+	std::cout << (instructionSet == ARMv5_ARM9 ? "ARM9: " : "ARM7: ");
 
 	if (breakpointsNumber == 0) {
 		std::cout << "No breakpoint\n";

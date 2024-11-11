@@ -1,74 +1,79 @@
 #include "arm7_mem.h"
 #include "arm9_mem.h"
 
+#define RETURN_PTR_IF_IN_RANGE(address, startRangeAddress, rangeSize, rangePtr) if ((address >= startRangeAddress) && (address < (startRangeAddress + rangeSize))) return rangePtr + ((address - startRangeAddress) % rangeSize);
+
 uint32_t ARM9_mem::DTCM_ADDR = 0x27C0000;
 
 uint8_t* ARM9_mem::GetPointerFromAddr(uint32_t address) {
 	// ITCM
-	if (((address >= ITCM_ADDR) && (address < (ITCM_ADDR + ITCM_SIZE))) || ((address > (0x10000000 + ITCM_ADDR)) && (address < (0x10000000 + ITCM_ADDR + ITCM_SIZE)))) return itcm + (address & (ITCM_SIZE-1));
+	RETURN_PTR_IF_IN_RANGE(address, ITCM_ADDR, ITCM_SIZE, itcm);
+	RETURN_PTR_IF_IN_RANGE(address, ITCM_ADDR + 0x10000000, ITCM_SIZE, itcm);
 
 	// DTCM
-	if ((address >= DTCM_ADDR) && (address < (DTCM_ADDR + DTCM_SIZE))) return dtcm + (address & (DTCM_SIZE-1));
+	RETURN_PTR_IF_IN_RANGE(address, DTCM_ADDR, DTCM_SIZE, dtcm);
 
 	// MAIN
-	if ((address >= (MAINMEMORY_ADDR)) && (address < (MAINMEMORY_ADDR + MAINMEMORY_SIZE))) return main + (address & (MAINMEMORY_SIZE-1));
-	if ((address >= (MAINMEMCTRL_ADDR)) && (address < (MAINMEMCTRL_ADDR + MAINMEMCTRL_SIZE))) return mainMemControl + (address & (MAINMEMCTRL_SIZE-1));
+	RETURN_PTR_IF_IN_RANGE(address, MAINMEMORY_ADDR, MAINMEMORY_SIZE, main);
+	RETURN_PTR_IF_IN_RANGE(address, MAINMEMCTRL_ADDR, MAINMEMCTRL_SIZE, mainMemControl);
 
 	// Shared WRAM
-	if ((address >= (SHAREDWRAM_ADDR)) && (address < (SHAREDWRAM_ADDR + SHAREDWRAM_SIZE))) return shared_wram + (address & (SHAREDWRAM_SIZE-1));
+	RETURN_PTR_IF_IN_RANGE(address, SHAREDWRAM_ADDR, SHAREDWRAM_SIZE, shared_wram);
 
 	// IO
-	if ((address >= (IO_ADDR)) && (address < (IO_ADDR + IO_SIZE))) return io + (address & (IO_SIZE - 1));
+	RETURN_PTR_IF_IN_RANGE(address, IO_ADDR, IO_SIZE, io);
 
 	// MyDS debug
-	if ((address >= (MYDSDEBUG_ADDR)) && (address < (MYDSDEBUG_ADDR + MYDSDEBUG_SIZE))) return myds_debug + (address & (MYDSDEBUG_SIZE-1));
+	if ((address >= (MYDSDEBUG_ADDR)) && (address < (MYDSDEBUG_ADDR + MYDSDEBUG_SIZE))) return myds_debug + ((address - MYDSDEBUG_ADDR) % MYDSDEBUG_SIZE);
+	RETURN_PTR_IF_IN_RANGE(address, IO_ADDR, IO_SIZE, io);
 
 	// Palettes
-	if ((address >= (PALETTES_ADDR)) && (address < (PALETTES_ADDR + PALETTES_SIZE))) return palettes + (address & (PALETTES_SIZE-1));
+	if ((address >= (PALETTES_ADDR)) && (address < (PALETTES_ADDR + PALETTES_SIZE))) return palettes + ((address - PALETTES_ADDR) % PALETTES_SIZE);
+	RETURN_PTR_IF_IN_RANGE(address, IO_ADDR, IO_SIZE, io);
 
 	// VRAMs - TODO : check ?
-	if ((address >= (VRAMABG_ADDR)) && (address < (VRAMABG_ADDR + VRAMABG_SIZE))) return vram_A_bg + (address & (VRAMABG_SIZE-1));
-	if ((address >= (VRAMBBG_ADDR)) && (address < (VRAMBBG_ADDR + VRAMBBG_SIZE))) return vram_B_bg + (address & (VRAMBBG_SIZE-1));
-	if ((address >= (VRAMAOBJ_ADDR)) && (address < (VRAMAOBJ_ADDR + VRAMAOBJ_SIZE))) return vram_A_obj + (address & (VRAMAOBJ_SIZE-1));
-	if ((address >= (VRAMBOBJ_ADDR)) && (address < (VRAMBOBJ_ADDR + VRAMBOBJ_SIZE))) return vram_B_obj + (address & (VRAMBOBJ_SIZE - 1));
-	if ((address >= (VRAMLCDC_ADDR)) && (address < (VRAMLCDC_ADDR + VRAMLCDC_SIZE))) return vram_lcdc + (address & (VRAMLCDC_SIZE-1));
+	RETURN_PTR_IF_IN_RANGE(address, VRAMABG_ADDR, VRAMABG_SIZE, vram_A_bg);
+	RETURN_PTR_IF_IN_RANGE(address, VRAMBBG_ADDR, VRAMBBG_SIZE, vram_B_bg);
+	RETURN_PTR_IF_IN_RANGE(address, VRAMAOBJ_ADDR, VRAMAOBJ_SIZE, vram_A_obj);
+	RETURN_PTR_IF_IN_RANGE(address, VRAMBOBJ_ADDR, VRAMBOBJ_SIZE, vram_B_obj);
+	RETURN_PTR_IF_IN_RANGE(address, VRAMLCDC_ADDR, VRAMLCDC_SIZE, vram_lcdc);
 
 	// OAM
-	if ((address >= (OAMA_ADDR)) && (address < (OAMA_ADDR + OAM_SIZE))) return oam_A + (address & (OAM_SIZE-1));
-	if ((address >= (OAMB_ADDR)) && (address < (OAMB_ADDR + OAM_SIZE))) return oam_B + (address & (OAM_SIZE - 1));
+	RETURN_PTR_IF_IN_RANGE(address, OAMA_ADDR, OAM_SIZE, oam_A);
+	RETURN_PTR_IF_IN_RANGE(address, OAMB_ADDR, OAM_SIZE, oam_B);
 
 	// GBA
-	if ((address >= (GBARAM_ADDR)) && (address < (GBARAM_ADDR + GBARAM_SIZE))) return gba_ram + (address & (GBARAM_SIZE-1));
-	if ((address >= (GBAROM_ADDR)) && (address < (GBAROM_ADDR + GBAROM_SIZE))) return gba_rom + (address & (GBAROM_SIZE - 1));
+	RETURN_PTR_IF_IN_RANGE(address, GBARAM_ADDR, GBARAM_SIZE, gba_ram);
+	RETURN_PTR_IF_IN_RANGE(address, GBAROM_ADDR, GBAROM_SIZE, gba_rom);
 
 	// BIOS
-	if ((address >= (BIOS_ADDR)) && (address < (BIOS_ADDR + BIOS_SIZE))) return bios + (address & (BIOS_SIZE - 1));
+	RETURN_PTR_IF_IN_RANGE(address, BIOS_ADDR, BIOS_SIZE, bios);
 
-	// TODO : what if address invalid ?
+	// TODO : what if address invalid ?f
 	return nullptr;
 }
 
 uint8_t* ARM7_mem::GetPointerFromAddr(uint32_t address) {
 	// BIOS
-	if ((address & 0xFFFF0000) == 0x00000000) return bios + (address & 0x00003FFF);
+	RETURN_PTR_IF_IN_RANGE(address, BIOS_ADDR, BIOS_SIZE, bios);
 
 	// MAIN
-	if ((address & 0xFFC00000) == 0x02000000) return main + (address & 0x003FFFFF);
+	RETURN_PTR_IF_IN_RANGE(address, MAINMEMORY_ADDR, MAINMEMORY_SIZE, main);
 
 	// WRAM & Shared WRAM
-	if ((address & 0xFF800000) == 0x03000000) return shared_wram + (address & 0x00007FFF);
-	if ((address & 0xFF800000) == 0x03800000) return wram + (address & 0x0000FFFF);
+	RETURN_PTR_IF_IN_RANGE(address, SHAREDWRAM_ADDR, SHAREDWRAM_SIZE, shared_wram);
+	RETURN_PTR_IF_IN_RANGE(address, WRAM_ADDR, WRAM_SIZE, wram);
 
 	// IO
-	if ((address & 0xFF800000) == 0x04000000) return io + (address & 0x001FFFFF);
-	if ((address & 0xFF800000) == 0x04800000) return io_wifi + (address & 0x0000BFFF);
+	RETURN_PTR_IF_IN_RANGE(address, IO_ADDR, IO_SIZE, io);
+	RETURN_PTR_IF_IN_RANGE(address, IOWIFI_ADDR, IOWIFI_SIZE, io_wifi);
 
 	// VRAM as WRAM
-	if ((address & 0xFF000000) == 0x06000000) return vram_as_wram + (address & 0x0003FFFF);
+	RETURN_PTR_IF_IN_RANGE(address, VRAM_AS_WRAM_ADDR, VRAM_AS_WRAM_SIZE, vram_as_wram);
 
 	// GBA
-	if ((address & 0xFF000000) == 0x0A000000) return gba_ram + (address & 0x0000FFFF);
-	if ((address & 0xF8000000) == 0x08000000) return gba_rom + (address & 0x01FFFFFF);
+	RETURN_PTR_IF_IN_RANGE(address, GBAROM_ADDR, GBAROM_SIZE, gba_rom);
+	RETURN_PTR_IF_IN_RANGE(address, GBARAM_ADDR, GBARAM_SIZE, gba_ram);
 
 	// TODO : what if address invalid ?
 	return nullptr;

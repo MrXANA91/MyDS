@@ -38,7 +38,7 @@ public:
 	static uint32_t DTCM_ADDR;
 	static const size_t DTCM_SIZE = 0x4000;
 	static const uint32_t MAINMEMORY_ADDR = 0x2000000;
-	static const size_t MAINMEMORY_SIZE = 0x40000;
+	static const size_t MAINMEMORY_SIZE = 0x400000;
 	static const uint32_t SHAREDWRAM_ADDR = 0x03000000;
 	static const size_t SHAREDWRAM_SIZE = 0x8000;
 

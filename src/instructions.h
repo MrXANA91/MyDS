@@ -82,7 +82,6 @@ enum eInstructCode : int {
 	INSTRUCT_MULTIPLY_LONG,
 	// Extra Load/Store
 	INSTRUCT_SWAP,
-	INSTRUCT_LOAD_STORE_REG_EXCLUSIVE,
 	INSTRUCT_LOAD_STORE_HALFWORD_REG_OFFSET,
 	INSTRUCT_LOAD_STORE_HALFWORD_IMM_OFFSET,
 	INSTRUCT_LOAD_SIGNED_HALFWORD_BYTE_IMM_OFFSET,
@@ -530,20 +529,6 @@ union sSwapInstruction {
 
 static_assert(sizeof(sSwapInstruction) == 4, "sSwapInstruction size is not 4");
 
-union sLoadStoreRegExclusive {
-	struct {
-		uint32_t mustbeF9F : 12;
-		uint32_t Rd : 4;
-		uint32_t Rn : 4;
-		uint32_t L : 1;
-		uint32_t mustbe0001100 : 7;
-		uint32_t condition : 4;
-	};
-	uint32_t code;
-};
-
-static_assert(sizeof(sLoadStoreRegExclusive) == 4, "sLoadStoreRegExclusive size is not 4");
-
 union sLoadStoreHalfwordRegOffset {
 	struct {
 		uint32_t Rm : 4;
@@ -904,7 +889,6 @@ public:
 
 	// Extra LoadStore
 	sSwapInstruction* pSwapInstruction;
-	sLoadStoreRegExclusive* pLoadStoreRegExclusive;
 	sLoadStoreHalfwordRegOffset* pLoadStoreHalfwordRegOffset;
 	sLoadStoreHalfwordImmOffset* pLoadStoreHalfwordImmOffset;
 	sLoadSignedHalfwordByteImmOffset* pLoadSignedHalfwordByteImmOffset;
@@ -984,7 +968,6 @@ public:
 
 	// Extra Load/Store
 	bool IsSwapInstruction() const;
-	bool IsLoadStoreRegExclusive() const;
 	bool IsLoadStoreHalfwordRegOffset() const;
 	bool IsLoadStoreHalfwordImmOffset() const;
 	bool IsLoadSignedHalfwordByteImmOffset() const;
