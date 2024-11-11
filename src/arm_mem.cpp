@@ -80,6 +80,9 @@ uint8_t* ARM7_mem::GetPointerFromAddr(uint32_t address) {
 }
 
 uint64_t ARM_mem::GetBytesAtPointer(uint8_t* startPtr, int size) {
+	if (startPtr == nullptr) {
+		return 0;
+	}
 	uint8_t* ptr = startPtr;
 	uint64_t value = 0;
 	if (size > 8) size = 8;
