@@ -30,7 +30,7 @@ If you want a proper DS emulator, use [MelonDS](https://github.com/melonDS-emu/m
 ## Contributing
 
 Contribution are not expected on this project for the moment.<br/>
-At some point, issues will be open for people to give advice on implementation, but that's probably all.
+At some point, issues will be read for people to give advice on implementation, but that's probably all as this project is more of an education for me.
 
 ## Ressources
 
